@@ -1,0 +1,344 @@
+/* --- Google Fontsの読み込み --- */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+/* --- 全体のスタイル --- */
+body {
+    font-family: 'Noto Sans JP', sans-serif;
+    color: #333;
+}
+
+/* --- メインコンテンツエリアの調整 --- */
+.main .block-container {
+    padding-top: 3rem;
+}
+
+/* --- サイドバーのスタイル --- */
+.st-emotion-cache-16txtl3 {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+}
+
+.st-emotion-cache-16txtl3 h1,
+.st-emotion-cache-16txtl3 h2,
+.st-emotion-cache-16txtl3 h3 {
+    color: #0d6efd;
+}
+
+/* --- カードデザイン --- */
+.st-emotion-cache-16txtl3 .st-emotion-cache-1r4qj8v {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* --- ボタンの立体デザイン (デフォルト: 青) --- */
+.stButton > button {
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(145deg, #5c87c9, #1c3457);
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff;
+    transition: all 0.2s ease-in-out;
+}
+
+/* --- プライマリボタン (緑) --- */
+.stButton > button.st-emotion-cache-19rxjzo {
+    background: linear-gradient(145deg, #198754, #146c43);
+}
+
+.stButton > button:hover {
+    opacity: 0.9;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff;
+}
+
+/* デフォルトボタン (青) の active */
+.stButton > button:active {
+    box-shadow: inset 4px 4px 8px #19355e, inset -4px -4px 8px #2c609c;
+}
+
+/* プライマリボタン (緑) の active */
+.stButton > button.st-emotion-cache-19rxjzo:active {
+    background: linear-gradient(145deg, #146c43, #198754);
+    box-shadow: inset 4px 4px 8px #105535, inset -4px -4px 8px #22b973;
+}
+
+.stButton > button:disabled {
+    background: #e9ecef;
+    color: #adb5bd;
+    border: 1px solid #ced4da;
+    box-shadow: none;
+}
+
+/* --- テキスト入力欄 --- */
+.stTextInput input {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stTextInput input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- サイドバーの幅を広げる --- */
+[data-testid="stSidebar"] {
+    width: 550px !important;
+}
+
+/* --- キャンセルボタン（グレー）--- */
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stButton > button {
+    background: linear-gradient(145deg, #868e96, #6c757d);
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff;
+}
+
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stButton > button:active {
+    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0;
+}
+
+/* --- プログレスバーのスタイル --- */
+[data-testid="stProgressBar"] > div > div {
+    background-color: #28a745 !important; /* 緑色 */
+    height: 10px !important;
+    border-radius: 5px !important;
+}
+
+/* 念のため、一つ少ない階層も指定 */
+[data-testid="stProgressBar"] > div {
+    /* background-color: #f0f2f6;  */ /* 外側のバーの色はデフォルトのままにする */
+    border-radius: 5px !important; /* 角丸だけ適用 */
+}
+
+/* --- [修正] Excelダウンロードボタンのスタイル (青) --- */
+a.download-button-excel {
+    display: inline-block; /* st.button のような振る舞いにする */
+    width: 100%; /* コンテナ幅いっぱいに広げる */
+    box-sizing: border-box; /* paddingを含めてwidth 100%にするため */
+
+    border: none !important;
+    border-radius: 8px !important;
+    /* [変更] 上下のpaddingを小さくし、ログアウトボタンの高さに合わせる */
+    padding: 8px 6px !important;
+    font-weight: 400 !important; /* 700 -> 400 */
+    color: white !important;
+    text-decoration: none !important; /* リンクの下線を消す */
+    text-align: center; /* 文字を中央揃えに */
+
+    /* 青系の背景と影に変更 */
+    background: linear-gradient(145deg, #5c87c9, #1c3457) !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+a.download-button-excel:hover {
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important; /* ホバー時も文字色を白に固定 */
+    text-decoration: none !important; /* リンクの下線を消す */
+}
+
+a.download-button-excel:active {
+    /* active時のスタイルも青系に合わせる */
+    box-shadow: inset 4px 4px 8px #19355e, inset -4px -4px 8px #2c609c !important;
+    color: white !important; /* 念のため */
+    text-decoration: none !important; /* リンクの下線を消す */
+}
+
+/* --- ★テーブルコンテナと固定ヘッダー用のスタイル --- */
+.table-container {
+    max-height: 80vh; /* 画面の高さの70%を上限とする */
+    overflow-y: auto; /* 縦方向にスクロールバーを必要に応じて表示 */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.custom_df {
+    border-collapse: collapse;
+    width: 100%;
+    /* 親コンテナに移動したため削除 */
+    /* border-radius: 10px; */
+    /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); */
+}
+
+.custom_df th, .custom_df td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 14px; /* ← この行を追加 */
+}
+
+.custom_df th {
+    font-weight: bold;
+    color: #495057;
+    /* ヘッダーをコンテナの最上部に固定する */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #f8f9fa; /* 背景色を不透明にする */
+}
+
+.custom_df tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+.custom_df a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.custom_df tbody tr:hover td:hover {
+    background-color: #e9ecef;
+}
+
+/* --- チェックボックスのスタイル --- */
+/* チェックが入った時の背景色と枠線の色を青に設定 */
+div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div[aria-checked="true"] {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+/* チェック前の枠線の色を青に設定 */
+div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div {
+    border-color: #0d6efd !important;
+}
+
+/* --- マルチセレクトの選択済みアイテム --- */
+/* 選択されたアイテム（タグ）の背景色を青に設定 */
+div[data-baseweb="tag"] {
+    background-color: #0d6efd !important;
+}
+/* タグ内のテキスト色を白に設定 */
+div[data-baseweb="tag"] span {
+    color: white !important;
+}
+/* タグ内の削除ボタン(x)のアイコン色を白に設定 */
+div[data-baseweb="tag"] [aria-label="Remove item"] {
+    color: white !important;
+}
+
+/* --- メインコンテンツのコンテナ（フィルターエリアなど） --- */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* --- トーストの背景色（緑）と位置（右下） --- */
+[data-testid="stToast"] {
+    background-color: #8de6a2; 
+    color: #000000; 
+    
+    /* ▼▼▼ 以下4行を追加 ▼▼▼ */
+    top: auto !important;     /* 上の位置指定を解除 */
+    bottom: 2rem !important;  /* 下から 2rem (約32px) の位置に指定 */
+    right: 2rem !important;   /* 右から 2rem (約32px) の位置に指定 */
+    left: auto !important;    /* 左の位置指定を解除 */
+}
+
+/* トースト内の閉じるボタン（X）も白にする */
+[data-testid="stToast"] button {
+    color: white;
+}
+
+/* --- ログアウトボタン（グレー）--- */
+/* key="logout_button" に対応 */
+[data-testid="stButton-logout_button"] {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    color: white !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    border: none !important;
+}
+
+[data-testid="stButton-logout_button"]:hover {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important;
+}
+
+[data-testid="stButton-logout_button"]:active {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
+}
+
+/* --- ページネーションボタン（グレー）--- */
+/* key="page_first", "page_prev", "page_next", "page_last" に対応 */
+[data-testid="stButton-page_first"],
+[data-testid="stButton-page_prev"],
+[data-testid="stButton-page_next"],
+[data-testid="stButton-page_last"] {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    color: white !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    border: none !important;
+}
+
+[data-testid="stButton-page_first"]:hover,
+[data-testid="stButton-page_prev"]:hover,
+[data-testid="stButton-page_next"]:hover,
+[data-testid="stButton-page_last"]:hover {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important;
+}
+
+[data-testid="stButton-page_first"]:active,
+[data-testid="stButton-page_prev"]:active,
+[data-testid="stButton-page_next"]:active,
+[data-testid="stButton-page_last"]:active {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
+}
+
+/* --- ページネーションボタン（非アクティブ時）--- */
+/* :disabled 状態（リクエスト通り、薄いグレー） */
+[data-testid="stButton-page_first"]:disabled,
+[data-testid="stButton-page_prev"]:disabled,
+[data-testid="stButton-page_next"]:disabled,
+[data-testid="stButton-page_last"]:disabled {
+    /* Streamlitのデフォルトグレーボタンに戻す */
+    background: #e9ecef !important;
+    color: #adb5bd !important;
+    border: 1px solid #ced4da !important;
+    box-shadow: none !important;
+}
+
+/* Streamlitのメインコンテナの上部余白を強制的に減らす */
+div.block-container {
+    padding-top: 2.5rem;
+}
+
+
+/* --- Excel保存ボタン (緑) --- */
+[data-testid="stDownloadButton-download_excel_button"] > button {
+    background: linear-gradient(145deg, #5adb9f, #146c43) !important;
+    color: white !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    border: none !important;
+    
+    /* st.download_button は高さ調整の padding-top/bottom が必要 */
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    font-weight: 400 !important;
+}
+
+[data-testid="stDownloadButton-download_excel_button"] > button:hover {
+    background: linear-gradient(145deg, #5adb9f, #146c43) !important;
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important;
+}
+
+[data-testid="stDownloadButton-download_excel_button"] > button:active {
+    background: linear-gradient(145deg, #5adb9f, #146c43) !important;
+    box-shadow: inset 4px 4px 8px #105535, inset -4px -4px 8px #22b973 !important;
+}
