@@ -65,9 +65,8 @@ def create_excel_output(df_excel, portal_files):
         worksheet.set_column_pixels('B:B', 150) # 画像名
         worksheet.set_column_pixels('C:C', 100) # ステータス
         
-        # --- ▼▼▼ [変更] デフォルトの行高さを設定 (112.5pt = 150px) ▼▼▼ ---
+        # --- デフォルトの行高さを設定 (112.5pt = 150px) ---
         worksheet.set_default_row(112.5)
-        # --- ▲▲▲ [変更] ここまで ▲▲▲ ---
         # ヘッダー行の高さは別途設定
         worksheet.set_row(0, 30) 
 
@@ -125,9 +124,8 @@ def create_excel_output(df_excel, portal_files):
                     
                     if file_id_match:
                         file_id = file_id_match.group(1)
-                        # --- ▼▼▼ [変更] =IMAGE(URL) 形式の文字列を生成 ▼▼▼ ---
+                        # --- =IMAGE(URL) 形式の文字列を生成 ---
                         image_formula = f'=IMAGE("https://drive.google.com/uc?id={file_id}")'
-                        # --- ▲▲▲ [変更] ここまで ▲▲▲ ---
                         worksheet.write_formula(row_num + 1, col_num, image_formula, cell_format)
                     else:
                         worksheet.write(row_num + 1, col_num, '', cell_format)
@@ -457,7 +455,7 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             # --- データ書き込み準備 ---
             df_excel_gspread = df_excel.fillna('').copy()
             
-            # --- [修正] =IMAGE() 関数を使用するロジック (変更なし) ---
+            # --- =IMAGE() 関数を使用するロジック ---
             for col_name in df_excel_gspread.columns:
                 if '（画像）' in col_name:
                     # 元のURL (https://drive.google.com/file/d/FILE_ID/view) から file_id を抽出
@@ -465,11 +463,10 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
                         lambda url: re.search(r'/d/([a-zA-Z0-9_-]+)', str(url))
                     )
                     
-                    # --- ▼▼▼ [変更] =IMAGE(URL, 4, 高さ, 幅) 形式の文字列を生成 ▼▼▼ ---
+                    # --- =IMAGE(URL, 4, 高さ, 幅) 形式の文字列を生成 ---
                     df_excel_gspread[col_name] = file_id_series.apply(
                         lambda match: f'=IMAGE("https://drive.google.com/uc?id={match.group(1)}")' if match else ""
                     )
-                    # --- ▲▲▲ [変更] ここまで ▲▲▲ ---
             
             headers = df_excel_gspread.columns.values.tolist()
             data_values = df_excel_gspread.values.tolist()

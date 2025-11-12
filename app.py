@@ -181,7 +181,7 @@ else: # Google認証済みの場合のみ以下を実行
     if 'execute_drive_load_now' not in st.session_state:
         st.session_state.execute_drive_load_now = False
 
-    # --- [修正] スプレッドシート保存先入力用のキー ---
+    # --- スプレッドシート保存先入力用のキー ---
     if 'show_gspread_url_input' not in st.session_state:
         st.session_state.show_gspread_url_input = False
     if 'gspread_sheet_url_input' not in st.session_state: 
@@ -328,7 +328,7 @@ else: # Google認証済みの場合のみ以下を実行
             st.session_state.show_drive_clear_confirmation = False # 確認ダイアログが開いていれば閉じる
             return # URLがないので処理終了
 
-        # --- ▼▼▼ URL解決とID抽出処理 ▼▼▼ ---
+        # --- URL解決とID抽出処理 ---
         final_drive_url = None
         drive_folder_id = None
 
@@ -386,7 +386,6 @@ else: # Google認証済みの場合のみ以下を実行
     def get_google_credentials():
         try:
             google_credentials_info = json.loads(st.secrets["google"]["credentials_json"])
-            # --- [修正] scopes を .readonly から変更 ---
             creds = service_account.Credentials.from_service_account_info(
                 google_credentials_info,
                 scopes=[
@@ -395,12 +394,12 @@ else: # Google認証済みの場合のみ以下を実行
                 ]
             )
             
-            # --- [修正] 辞書とオブジェクトの両方を返す ---
+            # --- 辞書とオブジェクトの両方を返す ---
             return creds, google_credentials_info
         except (KeyError, json.JSONDecodeError, FileNotFoundError) as e:
             st.error(f"secrets.tomlの読み込みまたは設定にエラーがあります。エラー: {e}")
             st.stop()
-            return None, None # [修正] 戻り値を2つに
+            return None, None # 戻り値を2つに
 
     def get_drive_service(_credentials):
         return build('drive', 'v3', credentials=_credentials)
@@ -409,7 +408,7 @@ else: # Google認証済みの場合のみ以下を実行
         return build('sheets', 'v4', credentials=_credentials)
 
     try:
-        # --- [修正] 戻り値を2つ受け取る ---
+        # --- 戻り値を2つ受け取る ---
         google_creds, google_creds_info = get_google_credentials()
         drive_service = get_drive_service(google_creds)
         sheets_service = get_sheets_service(google_creds)
@@ -467,7 +466,7 @@ else: # Google認証済みの場合のみ以下を実行
         business_codes = set()
         try:
             # まず指定されたフォルダ自体を取得（存在確認と名前取得のため）
-            # --- [修正] 共有ドライブ対応 ---
+            # --- 共有ドライブ対応 ---
             folder_info = drive_service.files().get(
                 fileId=drive_folder_id, 
                 fields="id, name",
@@ -704,7 +703,7 @@ else: # Google認証済みの場合のみ以下を実行
     def download_drive_image_sync(file_id, credentials):
         """同期的にGoogle Driveから画像データをダウンロードする"""
         drive = build('drive', 'v3', credentials=credentials)
-        # --- [修正] 共有ドライブ対応 ---
+        # --- 共有ドライブ対応 ---
         request = drive.files().get_media(fileId=file_id, supportsAllDrives=True)
         return request.execute() # 画像のバイナリデータを返す
 
@@ -722,7 +721,7 @@ else: # Google認証済みの場合のみ以下を実行
         except Exception as e:
             return portal_name, f"Google Drive画像取得失敗: {e}", None # その他のエラー
 
-        # --- プロンプト (変更なし) ---
+        # --- プロンプト ---
         prompt = """あなたは、商品広告画像のテキストを人間が読む通りに正確に書き起こす専門家です。
 あなたのタスク:
 渡された画像の中から全てのテキストを読み取り、人間が目で追う自然な順序（上から下、左から右）に並べ替えてください。そして、単語や意味のまとまり（フレーズ）ごとに改行を入れて出力してください。
@@ -880,7 +879,7 @@ else: # Google認証済みの場合のみ以下を実行
 
         if not image_groups:
             st.warning("処理対象の画像が見つかりませんでした。")
-            return None, None, None, None # [修正] 4つのNoneを返す
+            return None, None, None, None # 4つのNoneを返す
 
         print(unique_product_codes_to_fetch)
 
@@ -922,9 +921,8 @@ else: # Google認証済みの場合のみ以下を実行
         # 結果をDataFrame用に整形
         results_list_display, results_list_excel = [], []
 
-        # --- ▼▼▼ [追加] 画像バイナリデータを格納する辞書 ▼▼▼ ---
+        # --- 画像バイナリデータを格納する辞書 ---
         all_image_bytes_data = {} # {image_name: {portal_name: bytes}}
-        # --- ▲▲▲ [追加] ここまで ▲▲▲ ---
 
         # ポータル名のリストを取得（Excelの列順のため）
         all_portal_names = sorted(list(portal_files.keys()))
@@ -937,9 +935,8 @@ else: # Google認証済みの場合のみ以下を実行
 
         for image_name, ocr_results, volume_results, image_bytes, typo_result, neng_content, comparison_result, text_comparison_result in all_results:
             
-            # --- ▼▼▼ [追加] 画像バイナリデータを辞書に格納 ▼▼▼ ---
+            # --- 画像バイナリデータを辞書に格納 ---
             all_image_bytes_data[image_name] = image_bytes # image_bytes は {portal_name: bytes}
-            # --- ▲▲▲ [追加] ここまで ▲▲▲ ---
             
             row_data_display, row_data_excel = {"画像名": image_name}, {"画像名": image_name}
 
@@ -981,7 +978,7 @@ else: # Google認証済みの場合のみ以下を実行
             row_data_excel["ステータス"] = status
 
             for portal_name in all_portal_names:
-                img_bytes_data = image_bytes.get(portal_name) # [修正] 変数名変更
+                img_bytes_data = image_bytes.get(portal_name)
                 extracted_text = ocr_results.get(portal_name)
                 extracted_volume = volume_results.get(portal_name)
                 file_id = image_groups.get(image_name, {}).get('portals', {}).get(portal_name, {}).get('id')
@@ -1059,13 +1056,10 @@ else: # Google認証済みの場合のみ以下を実行
             lambda x: re.sub('<[^<]+?>', '', str(x)) if isinstance(x, str) else x
         )
 
-        # --- ▼▼▼ [修正] all_image_bytes_data も返す ▼▼▼ ---
+        # --- all_image_bytes_data も返す ---
         return df_display, df_plain_text_for_search, df_excel, all_image_bytes_data
-        # --- ▲▲▲ [修正] ここまで ▲▲▲ ---
 
     # --- Streamlit UI ---
-
-    # ... (タイトル、ログアウトボタンは変更なし) ...
     col1, col2 = st.columns([4, 1]) 
     with col1:
         image_tag = ""
@@ -1083,7 +1077,7 @@ else: # Google認証済みの場合のみ以下を実行
         if st.button("ログアウト", icon=":material/logout:", width='stretch', key="logout_button"): 
             st.logout() 
 
-    # --- サイドバー (変更なし) ---
+    # --- サイドバー ---
     with st.sidebar:
         with st.container(border=True):
             st.header("1. Google Drive 設定")
@@ -1131,7 +1125,7 @@ else: # Google認証済みの場合のみ以下を実行
                 st.sidebar.warning("自治体リストの形式が古いです。データを再読み込みします。")
                 with st.sidebar, st.spinner("自治体リストを更新中..."):
                     if 'sheets_service' not in locals():
-                        google_creds_check, _ = get_google_credentials() # [修正]
+                        google_creds_check, _ = get_google_credentials()
                         sheets_service = get_sheets_service(google_creds_check)
 
                     st.session_state.municipality_map = get_municipality_map(sheets_service)
@@ -1257,14 +1251,13 @@ else: # Google認証済みの場合のみ以下を実行
                     if c1_ocr.button("OK", width='stretch', key="ocr_exec_ok"):
                         st.session_state.show_ocr_confirmation = False
                         
-                        # --- ▼▼▼ [改修] 実行前に前回の結果をクリアする ▼▼▼ ---
+                        # --- 実行前に前回の結果をクリアする ---
                         st.session_state.ocr_result_df = None
                         st.session_state.ocr_plain_df = None
                         st.session_state.ocr_excel_output = None
                         st.session_state.ocr_excel_df = None 
                         st.session_state.ocr_image_bytes = None
                         st.session_state.current_page = 1
-                        # --- ▲▲▲ [改修] ここまで ▲▲▲ ---
 
                         municipality_code = None
                         try:
@@ -1281,9 +1274,8 @@ else: # Google認証済みの場合のみ以下を実行
                             with st.spinner("OCR処理を実行中です..."):
                                 progress_bar = st.progress(0, text="準備中...")
                                 try:
-                                    # --- ▼▼▼ [修正] 戻り値に image_bytes_data を追加 ▼▼▼ ---
+                                    # --- 戻り値に image_bytes_data を追加 ---
                                     df, df_plain, df_excel, image_bytes_data = run_ocr_process(
-                                    # --- ▲▲▲ [修正] ここまで ▲▲▲ ---
                                         st.session_state.portal_files,
                                         municipality_code,
                                         selected_business_code,
@@ -1304,9 +1296,8 @@ else: # Google認証済みの場合のみ以下を実行
                                         st.session_state.ocr_result_df = df
                                         st.session_state.ocr_plain_df = df_plain
                                         st.session_state.ocr_excel_df = df_excel 
-                                        # --- ▼▼▼ [追加] 画像バイナリデータをセッションに保存 ▼▼▼ ---
+                                        # --- 画像バイナリデータをセッションに保存 ---
                                         st.session_state.ocr_image_bytes = image_bytes_data
-                                        # --- ▲▲▲ [追加] ここまで ▲▲▲ ---
                                         st.session_state.show_success_message = True
                                 except Exception as e:
                                     st.error(f"OCR処理の実行中にエラーが発生しました: {e}")
@@ -1321,15 +1312,6 @@ else: # Google認証済みの場合のみ以下を実行
 
     if st.session_state.pop("show_success_message", False):
         st.toast("処理が完了しました。", icon="🎉")
-
-    # def _cancel_gspread_save():
-    #     # st.session_state.show_gspread_url_input = False # ← 常時表示のため不要
-    #     st.session_state.gspread_sheet_url_input = "" # 入力欄をクリア
-        
-    #     # ▼▼▼ 以下を2行追加 ▼▼▼
-    #     st.session_state.gspread_save_success_url = None # 成功メッセージをクリア
-    #     st.session_state.gspread_save_error_message = None # エラーメッセージをクリア
-    #     # ▲▲▲ 追加ここまで ▲▲▲
     
     # --- 結果表示エリア ---
     if 'ocr_result_df' in st.session_state and st.session_state.ocr_result_df is not None:
@@ -1344,7 +1326,7 @@ else: # Google認証済みの場合のみ以下を実行
         else:
             product_filter_options = ["すべて"]
 
-        # --- フィルターUI (変更なし) ---
+        # --- フィルターUI ---
         filter_col, view_col = st.columns(2)
         with view_col:
             with st.container(border=True):
@@ -1381,7 +1363,7 @@ else: # Google認証済みの場合のみ以下を実行
                     status_filter = st.selectbox("ステータス", ["すべて", "要確認", "異常なし"])
                 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-        # --- テーブル表示 (変更なし) ---
+        # --- テーブル表示 ---
         def highlight_row(row, ocr_visible, content_visible):
             style = ''
             has_visible_error = False
@@ -1412,10 +1394,10 @@ else: # Google認証済みの場合のみ以下を実行
 
             return [style] * len(row)
 
-        # --- データフィルタリング (変更なし) ---
+        # --- データフィルタリング ---
         df_to_process = df_display_source.copy() 
 
-        # --- [修正] ファイル名/シート名生成ロジック (変更なし) ---
+        # --- ファイル名/シート名生成ロジック ---
         today_str = datetime.datetime.now().strftime('%Y%m%d')
         municipality_name = st.session_state.old_municipality if st.session_state.old_municipality else "unknown"
         municipality_name_safe = re.sub(r'[\\/*?:"<>|]', '_', municipality_name) 
@@ -1431,7 +1413,7 @@ else: # Google認証済みの場合のみ以下を実行
 
         col_header_left, col_header_right = st.columns([3, 2])
         
-        # --- ▼▼▼ [修正] _execute_gspread_save コールバック定義 ▼▼▼ ---
+        # --- _execute_gspread_save コールバック定義 ---
         def _execute_gspread_save():
             # 実行前に以前のメッセージをリセット
             st.session_state.gspread_save_success_url = None
@@ -1461,7 +1443,7 @@ else: # Google認証済みの場合のみ以下を実行
                         image_bytes_data
                     )
                 
-                # ▼▼▼ 修正: GID（シートID）を取得してURLを生成 ▼▼▼
+                #  GID（シートID）を取得してURLを生成
                 with st.spinner("シートURLを取得中..."):
                     sheet_metadata = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
                     sheets = sheet_metadata.get('sheets', [])
@@ -1479,7 +1461,6 @@ else: # Google認証済みの場合のみ以下を実行
                     st.session_state.gspread_save_success_url = f"{base_url}edit#gid={gid}" # GID付きURL
                 else:
                     st.session_state.gspread_save_success_url = base_url # GIDが見つからなかった場合
-                # ▲▲▲ 修正ここまで ▲▲▲
 
             except HttpError as e: # HttpErrorをキャッチ
                 st.session_state.gspread_save_error_message = f"スプレッドシート処理中にエラーが発生しました: {e}"
@@ -1487,7 +1468,6 @@ else: # Google認証済みの場合のみ以下を実行
                 st.session_state.gspread_save_error_message = "サービスアカウントの認証情報(google_creds_info)の読み込みに失敗しました。" 
             except Exception as e:
                 st.session_state.gspread_save_error_message = f"スプレッドシート保存処理で予期せぬエラー: {e}"
-        # --- ▲▲▲ [修正] ここまで ▲▲▲ ---
 
 
         if not selected_portals:
@@ -1552,7 +1532,7 @@ else: # Google認証済みの場合のみ以下を実行
                 )
                 df_to_process = df_to_process[mask_search]
 
-            # --- フィルタリング結果表示 (変更なし) ---
+            # --- フィルタリング結果表示 ---
             filtered_count = len(df_to_process)
             is_filtered = (status_filter != "すべて") or (search_term != "") or (selected_product_filter != "すべて")
 
@@ -1562,15 +1542,14 @@ else: # Google認証済みの場合のみ以下を実行
                 else:
                     st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 {total_count}件</h2>", unsafe_allow_html=True)
 
-            # --- ボタン配置 (変更なし) ---
+            # --- ボタン配置 ---
             with col_header_right:
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
-                    # ▼▼▼ 修正: スプレッドシートボタンを削除し、passを記述 ▼▼▼
+                    # スプレッドシートボタンを削除し、passを記述
                     pass
-                    # ▲▲▲ 修正ここまで ▲▲▲
 
-                # ▼▼▼ 確認: 以下のブロックが削除されていないか確認してください ▼▼▼
+                # 以下のブロックが削除されていないか確認してください
                 with btn_col2:
                     if show_excel_button:
                         b64 = base64.b64encode(st.session_state.ocr_excel_output).decode()
@@ -1580,7 +1559,6 @@ else: # Google認証済みの場合のみ以下を実行
                     else:
                         st.button("Excelで保存", key="excel_dummy", width='stretch', disabled=True)
 
-            # --- (以降、テーブル表示・ページネーションは変更なし) ---
             all_columns = df_display_source.columns 
             final_columns_to_show = []
             for col in all_columns:
@@ -1679,7 +1657,7 @@ else: # Google認証済みの場合のみ以下を実行
 
                 scroll_page_to_bottom() # ページ最下部へスクロール
 
-    # --- OCR結果がまだない場合の表示 (変更なし) ---
+    # --- OCR結果がまだない場合の表示 ---
     else:
         col_header_left_c, col_header_right_c = st.columns([3, 2]) 
 
