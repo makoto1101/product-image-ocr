@@ -90,7 +90,6 @@ body {
 /* --- サイドバーの幅を広げる --- */
 [data-testid="stSidebar"] {
     width: 550px !important;
-    min-width: 550px !important;
 }
 
 /* --- キャンセルボタン（グレー）--- */
