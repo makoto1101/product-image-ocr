@@ -1,24 +1,24 @@
 import streamlit as st
 import pandas as pd
-# import io # 削除
+# [削除] io, tempfile, os を削除 (Excel生成にのみ使用されていたため)
 import copy
-# import re # 削除
-# import tempfile # 削除
-# import os # 削除
+import re 
+# [削除] pandas.io.formats.excel を削除
 
 # --- Google / Excel 関連 ---
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import gspread
 import gspread_dataframe as gd
-# import pandas.io.formats.excel # ExcelWriter を import するために必要 # 削除
+# [削除] pandas.io.formats.excel のインポートは export.py の先頭で行う
 
 # --- サービスアカウントのインポート ---
 from google.oauth2 import service_account
 
 
 # === Excel出力 (export.py) ===
-# 変更: create_excel_output 関数全体を削除
+
+# [削除] create_excel_output 関数全体を削除
 
 
 # === スプレッドシート出力 (export.py) ===
@@ -27,7 +27,7 @@ from google.oauth2 import service_account
 def get_google_services(creds_info): 
     """サービスアカウント認証情報(辞書)からDrive, Sheets(v4), gspreadのサービスを取得"""
     if creds_info is None:
-        return None, None, None
+        raise Exception("Googleサービス(export.py)の認証情報がありません。")
 
     try:
         scopes = [
@@ -44,9 +44,7 @@ def get_google_services(creds_info):
         
         return user_drive_service, user_sheets_service_v4, gc
     except Exception as e:
-        st.error(f"Googleサービス(export.py)への接続に失敗しました: {e}")
-        st.warning("gspreadが 'google-auth' ライブラリと競合している可能性があります。")
-        return None, None, None
+        raise Exception(f"Googleサービス(export.py)への接続に失敗しました: {e}")
 
 # 色の定義 (Google Sheets API用)
 def hex_to_rgb(hex_code):
@@ -234,8 +232,8 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                 if cell_value == "OK！":
                     current_cell_format.update(fmt_text_blue)
                 elif cell_value in ["差分あり", "要確認"] or \
-                     (col_name == "誤字脱字" and "OK！" not in str(cell_value)) or \
-                     (col_name == "エラー検出" and str(cell_value) != ""): 
+                        (col_name == "誤字脱字" and "OK！" not in str(cell_value)) or \
+                        (col_name == "エラー検出" and str(cell_value) != ""): 
                     current_cell_format.update(fmt_text_red)
                 elif cell_value in ["比較対象なし", "内容量記載なし"]:
                     current_cell_format.update(fmt_text_gray)
@@ -267,8 +265,7 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                 body=body
             ).execute()
         except HttpError as e:
-            st.error(f"スプレッドシートの基本書式設定に失敗しました: {e}")
-            raise # 致命的なエラーとしてスロー 
+            raise Exception(f"スプレッドシートの基本書式設定に失敗しました: {e}")
             
     # 次に、セルごとの書式設定をチャンクに分けて送信
     if cell_format_requests:
@@ -284,12 +281,9 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                     body=body
                 ).execute()
             except HttpError as e:
-                st.error(f"スプレッドシートの書式設定に失敗しました (Chunk {i//CHUNK_SIZE + 1}): {e}")
-                st.warning("接続エラーが発生したため、一部の色付けが不完全な可能性があります。")
-                break 
+                raise Exception(f"スプレッドシートの書式設定に失敗しました (Chunk {i//CHUNK_SIZE + 1}): {e}")
             except Exception as e:
-                st.error(f"スプレッドシートの書式設定中に予期せぬエラー (Chunk {i//CHUNK_SIZE + 1}): {e}")
-                break
+                raise Exception(f"スプレッドシートの書式設定中に予期せぬエラー (Chunk {i//CHUNK_SIZE + 1}): {e}")
 
 
 def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal_files, image_bytes_data):
@@ -303,8 +297,7 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
     user_drive_service, user_sheets_service_v4, gc = get_google_services(creds_info) 
     
     if not user_drive_service or not gc or not user_sheets_service_v4:
-        st.error("Googleサービスへの接続に失敗しました。")
-        return
+        raise Exception("Googleサービスへの接続に失敗しました。")
 
     try:
         with st.spinner(f"スプレッドシートを開き、「{sheet_name}」シートを準備中..."):
@@ -312,11 +305,9 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             try:
                 sh = gc.open_by_key(spreadsheet_id)
             except gspread.exceptions.SpreadsheetNotFound:
-                st.error("スプレッドシートが見つかりません。URLが正しいか、サービスアカウントに編集権限が付与されているか確認してください。")
-                return
+                raise Exception("スプレッドシートが見つかりません。URLが正しいか、サービスアカウントに編集権限が付与されているか確認してください。")
             except Exception as e:
-                st.error(f"スプレッドシートを開けませんでした: {e}")
-                return
+                raise Exception(f"スプレッドシートを開けませんでした: {e}")
 
             # 2. ワークシート（タブ）の準備
             worksheet_title = sheet_name
@@ -330,10 +321,11 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
                 worksheet.resize(rows=len(df_excel) + 1, cols=len(df_excel.columns))
             except gspread.exceptions.WorksheetNotFound:
                 # 存在しなければ作成
+                # --- 修正 ---
                 worksheet = sh.add_worksheet(title=worksheet_title, rows=len(df_excel) + 1, cols=len(df_excel.columns))
+                # --- 修正 ---
             except Exception as e:
-                st.error(f"シート「{worksheet_title}」の準備中にエラーが発生しました: {e}")
-                return
+                raise Exception(f"シート「{worksheet_title}」の準備中にエラーが発生しました: {e}")
 
         with st.spinner("スプレッドシートにデータを書き込み中..."):
             # --- データ書き込み準備 ---
@@ -369,19 +361,9 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             format_worksheet_gspread(user_sheets_service_v4, spreadsheet_id, worksheet.id, df_excel, portal_files)
 
         # 実行後のURLを生成 (シートIDを指定)
-        # sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={worksheet.id}" # 削除
-
-        st.toast(f"シート「{sheet_name}」に保存しました！", icon="✅")
-        # st.success(f"スプレッドシートに保存しました: [開く]({sheet_url})", icon="📄") # 削除
-
-        # 変更: 成功した場合、gid (worksheet.id) を返す
-        return worksheet.id
+        # sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={worksheet.id}"
+        # st.toast(f"シート「{sheet_name}」に保存しました！", icon="✅")
+        #st.success(f"スプレッドシートに保存しました: [開く]({sheet_url})", icon="📄")
 
     except Exception as e:
-        st.error(f"スプレッドシートへの書き込みまたは書式設定中にエラーが発生しました: {e}")
-        # 失敗した場合でも、作成途中のシートへのリンクを表示
-        sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
-        st.warning(f"データは保存されましたが、書式が適用されていない可能性があります。 [スプレッドシートリンク]({sheet_url})")
-
-        # 変更: 失敗した場合、None を返す
-        return None
+        raise Exception(f"スプレッドシートへの書き込みまたは書式設定中にエラーが発生しました: {e}")
