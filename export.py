@@ -1,143 +1,24 @@
 import streamlit as st
 import pandas as pd
-import io
+# import io # 削除
 import copy
-import re 
-import tempfile 
-import os       
+# import re # 削除
+# import tempfile # 削除
+# import os # 削除
 
 # --- Google / Excel 関連 ---
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import gspread
 import gspread_dataframe as gd
-import pandas.io.formats.excel # ExcelWriter を import するために必要
+# import pandas.io.formats.excel # ExcelWriter を import するために必要 # 削除
 
 # --- サービスアカウントのインポート ---
 from google.oauth2 import service_account
 
 
 # === Excel出力 (export.py) ===
-
-def create_excel_output(df_excel, portal_files):
-    """
-    DataFrameとポータルファイルリストから、Excelファイルのバイナリデータを生成する。
-    [方法A] =IMAGE() 関数を使用
-    """
-    
-    # ポータル名のリストを取得（Excelの列順のため）
-    all_portal_names = sorted(list(portal_files.keys())) if portal_files else []
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('OCR結果')
-
-        # --- セルの書式設定 ---
-        font_props = {'font_name': '游ゴシック'}
-        border_props = {'border': 1, 'border_color': '#808080'}
-        base_props = {**font_props, **border_props, 'valign': 'top', 'text_wrap': True}
-        highlight_bg = {'bg_color': '#FFE5E5'} # 問題のある行の背景色
-        font_color_error = {'font_color': 'red'} # "要確認"用
-        font_color_neutral = {'font_color': 'gray'}
-        font_color_ok = {'font_color': 'blue'} # 青文字の定義
-
-        header_format = workbook.add_format({**base_props, 'bold': True, 'bg_color': '#E0E0E0', 'valign': 'vcenter'})
-        default_format = workbook.add_format(base_props)
-        url_format = workbook.add_format({**base_props, 'color': 'blue', 'underline': 1})
-        
-        status_ok_format = workbook.add_format({**base_props, **font_color_ok}) 
-        status_error_format = workbook.add_format({**base_props, **font_color_error})
-        status_neutral_format = workbook.add_format({**base_props, **font_color_neutral})
-        default_highlight_format = workbook.add_format({**base_props, **highlight_bg})
-        url_highlight_format = workbook.add_format({**base_props, 'color': 'blue', 'underline': 1, **highlight_bg})
-        status_ok_highlight_format = workbook.add_format({**base_props, **font_color_ok, **highlight_bg}) 
-        status_error_highlight_format = workbook.add_format({**base_props, **font_color_error, **highlight_bg})
-        status_neutral_highlight_format = workbook.add_format({**base_props, **font_color_neutral, **highlight_bg})
-        
-        status_normal_ok_format = workbook.add_format({**base_props, **font_color_ok}) 
-        status_normal_error_format = workbook.add_format({**base_props, **font_color_error})
-        status_highlight_ok_format = workbook.add_format({**base_props, **font_color_ok, **highlight_bg}) 
-        status_highlight_error_format = workbook.add_format({**base_props, **font_color_error, **highlight_bg})
-
-        # --- 列幅設定 ---
-        worksheet.set_column_pixels('A:A', 50) # No
-        worksheet.set_column_pixels('B:B', 150) # 画像名
-        worksheet.set_column_pixels('C:C', 100) # ステータス
-        
-        # --- デフォルトの行高さを設定 (112.5pt = 150px) ---
-        worksheet.set_default_row(112.5)
-        # ヘッダー行の高さは別途設定
-        worksheet.set_row(0, 30) 
-
-        col_idx = 3 # D列から
-        for _ in all_portal_names:
-            worksheet.set_column_pixels(col_idx, col_idx, 200); col_idx += 1 # 画像
-            worksheet.set_column_pixels(col_idx, col_idx, 300); col_idx += 1 # OCR
-            worksheet.set_column_pixels(col_idx, col_idx, 150); col_idx += 1 # 内容量
-        
-        worksheet.set_column_pixels(col_idx, col_idx, 150) # テキスト比較
-        worksheet.set_column_pixels(col_idx + 1, col_idx + 1, 200) # 誤字脱字
-        worksheet.set_column_pixels(col_idx + 2, col_idx + 2, 150) # NENG内容量
-        worksheet.set_column_pixels(col_idx + 3, col_idx + 3, 150) # 内容量比較
-        worksheet.set_column_pixels(col_idx + 4, col_idx + 4, 150) # エラー検出
-
-
-        # ヘッダー書き込み
-        for col_num, value in enumerate(df_excel.columns.values):
-            worksheet.write(0, col_num, value, header_format)
-
-        # データ書き込み (行ごとに書式を設定)
-        for row_num, row_data in df_excel.iterrows():
-            is_highlight_row = (row_data.get('ステータス', '') == '要確認')
-
-            for col_num, col_name in enumerate(df_excel.columns):
-                cell_value = row_data[col_name]
-                if pd.isna(cell_value) or cell_value == '':
-                    empty_format = default_highlight_format if is_highlight_row else default_format
-                    worksheet.write(row_num + 1, col_num, '', empty_format)
-                    continue
-
-                cell_format = None
-                if col_name == "ステータス":
-                    if cell_value == "異常なし":
-                        cell_format = status_highlight_ok_format if is_highlight_row else status_normal_ok_format
-                    else: # "要確認"
-                        cell_format = status_highlight_error_format if is_highlight_row else status_normal_error_format
-                
-                elif col_name in ["テキスト比較", "誤字脱字", "内容量比較", "エラー検出"]:
-                    if cell_value == "OK！":
-                        cell_format = status_ok_highlight_format if is_highlight_row else status_ok_format
-                    elif cell_value in ["差分あり", "要確認"] or \
-                         (col_name == "誤字脱字" and "OK！" not in str(cell_value)) or \
-                         (col_name == "エラー検出" and str(cell_value) != ""): 
-                        cell_format = status_error_highlight_format if is_highlight_row else status_error_format
-                    elif cell_value in ["比較対象なし", "内容量記載なし"]:
-                        cell_format = status_neutral_highlight_format if is_highlight_row else status_neutral_format
-                    else: 
-                        cell_format = status_error_highlight_format if is_highlight_row else status_error_format 
-                
-                elif '（画像）' in col_name:
-                    cell_format = url_highlight_format if is_highlight_row else url_format
-                    
-                    file_id_match = re.search(r'/d/([a-zA-Z0-9_-]+)', str(cell_value))
-                    
-                    if file_id_match:
-                        file_id = file_id_match.group(1)
-                        # --- =IMAGE(URL) 形式の文字列を生成 ---
-                        image_formula = f'=IMAGE("https://drive.google.com/uc?id={file_id}")'
-                        worksheet.write_formula(row_num + 1, col_num, image_formula, cell_format)
-                    else:
-                        worksheet.write(row_num + 1, col_num, '', cell_format)
-                    
-                    continue
-                
-                else: 
-                    cell_format = default_highlight_format if is_highlight_row else default_format
-
-                worksheet.write(row_num + 1, col_num, cell_value, cell_format)
-
-    return output.getvalue()
+# 変更: create_excel_output 関数全体を削除
 
 
 # === スプレッドシート出力 (export.py) ===
@@ -232,7 +113,7 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
     col_width_requests = []
     
     col_properties = [
-        {"pixelSize": 50},  # A (No)
+        {"pixelSize": 50},   # A (No)
         {"pixelSize": 150}, # B (画像名)
         {"pixelSize": 100}, # C (ステータス)
     ]
@@ -353,8 +234,8 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                 if cell_value == "OK！":
                     current_cell_format.update(fmt_text_blue)
                 elif cell_value in ["差分あり", "要確認"] or \
-                       (col_name == "誤字脱字" and "OK！" not in str(cell_value)) or \
-                       (col_name == "エラー検出" and str(cell_value) != ""): 
+                     (col_name == "誤字脱字" and "OK！" not in str(cell_value)) or \
+                     (col_name == "エラー検出" and str(cell_value) != ""): 
                     current_cell_format.update(fmt_text_red)
                 elif cell_value in ["比較対象なし", "内容量記載なし"]:
                     current_cell_format.update(fmt_text_gray)
@@ -362,9 +243,11 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                     current_cell_format.update(fmt_text_red)
             
             elif '（画像）' in col_name:
-                # 画像列は中央揃えを適用
-                current_cell_format.update(IMAGE_CELL_FORMAT_GS)
-                # 注: =IMAGE() 関数自体に色は付かない
+                # [修正] 画像列はURL文字列が入るので、中央揃えではなくデフォルト(左上)のままにする
+                # current_cell_format.update(IMAGE_CELL_FORMAT_GS)
+                
+                # [追加] URLに下線と青色を付ける（ExcelのURL書式と同様）
+                current_cell_format.update({"textFormat": {"foregroundColor": COLOR_BLUE_GS, "underline": True}})
             
             cell_format_requests.append(
                 get_cell_format_request(sheet_id, row_idx_gspread, col_idx_gspread, current_cell_format)
@@ -413,6 +296,7 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
     """
     既存のスプレッドシートIDに、指定したシート名で新しいシートを作成し、
     データを書き込む (サービスアカウント使用)
+    [改修] GASで処理できるよう、URL文字列を=HYPERLINK()関数で書き込む
     """
     
     # サービスアカウントの「辞書」から各サービスをビルド
@@ -455,26 +339,29 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             # --- データ書き込み準備 ---
             df_excel_gspread = df_excel.fillna('').copy()
             
-            # --- =IMAGE() 関数を使用するロジック ---
+            # --- [ここから修正] ---
+            # （画像）列のURL文字列を =HYPERLINK() 数式に変換
+            
             for col_name in df_excel_gspread.columns:
                 if '（画像）' in col_name:
-                    # 元のURL (https://drive.google.com/file/d/FILE_ID/view) から file_id を抽出
-                    file_id_series = df_excel_gspread[col_name].apply(
-                        lambda url: re.search(r'/d/([a-zA-Z0-9_-]+)', str(url))
-                    )
                     
-                    # --- =IMAGE(URL, 4, 高さ, 幅) 形式の文字列を生成 ---
-                    df_excel_gspread[col_name] = file_id_series.apply(
-                        lambda match: f'=IMAGE("https://drive.google.com/uc?id={match.group(1)}")' if match else ""
-                    )
-            
+                    def create_hyperlink_formula(url_value):
+                        if isinstance(url_value, str) and url_value.startswith('http'):
+                            # URL文字列を " でエスケープし、=HYPERLINK() 数式を作成
+                            # 表示名を "画像リンク" にする
+                            return f'=HYPERLINK("{url_value}", "{url_value}")'
+                        return "" # URLでない場合は空
+
+                    df_excel_gspread[col_name] = df_excel_gspread[col_name].apply(create_hyperlink_formula)
+            # --- [修正ここまで] ---
+
             headers = df_excel_gspread.columns.values.tolist()
             data_values = df_excel_gspread.values.tolist()
             values_to_update = [headers] + data_values
             
             worksheet.update(
                 values_to_update,
-                value_input_option='USER_ENTERED' # これで =IMAGE() が関数として解釈される
+                value_input_option='USER_ENTERED' # これで =HYPERLINK() が関数として解釈される
             )
         
         with st.spinner("スプレッドシートの書式設定中..."):
@@ -482,13 +369,19 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             format_worksheet_gspread(user_sheets_service_v4, spreadsheet_id, worksheet.id, df_excel, portal_files)
 
         # 実行後のURLを生成 (シートIDを指定)
-        sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={worksheet.id}"
+        # sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={worksheet.id}" # 削除
 
         st.toast(f"シート「{sheet_name}」に保存しました！", icon="✅")
-        #st.success(f"スプレッドシートに保存しました: [開く]({sheet_url})", icon="📄")
+        # st.success(f"スプレッドシートに保存しました: [開く]({sheet_url})", icon="📄") # 削除
+
+        # 変更: 成功した場合、gid (worksheet.id) を返す
+        return worksheet.id
 
     except Exception as e:
         st.error(f"スプレッドシートへの書き込みまたは書式設定中にエラーが発生しました: {e}")
         # 失敗した場合でも、作成途中のシートへのリンクを表示
         sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
         st.warning(f"データは保存されましたが、書式が適用されていない可能性があります。 [スプレッドシートリンク]({sheet_url})")
+
+        # 変更: 失敗した場合、None を返す
+        return None

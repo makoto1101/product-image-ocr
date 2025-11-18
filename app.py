@@ -18,7 +18,8 @@ import os
 
 # --- ローカルモジュールのインポート ---
 from neng_api import get_neng_content
-from export import create_excel_output, save_to_spreadsheet
+# from export import create_excel_output, save_to_spreadsheet # 元
+from export import save_to_spreadsheet # 変更
 
 
 # --- Streamlit ページ設定 ---
@@ -145,8 +146,8 @@ else: # Google認証済みの場合のみ以下を実行
         st.session_state.ocr_result_df = None
     if 'ocr_plain_df' not in st.session_state: # 検索用の平文DF
         st.session_state.ocr_plain_df = None
-    if 'ocr_excel_output' not in st.session_state: # Excelバイナリデータ
-        st.session_state.ocr_excel_output = None
+    # if 'ocr_excel_output' not in st.session_state: # Excelバイナリデータ # 変更: 削除
+    #     st.session_state.ocr_excel_output = None
     if 'ocr_excel_df' not in st.session_state: # スプレッドシート保存用の元DF
         st.session_state.ocr_excel_df = None
     if 'ocr_image_bytes' not in st.session_state: # [追加] 画像バイナリデータ
@@ -255,7 +256,7 @@ else: # Google認証済みの場合のみ以下を実行
         """
         st.session_state.ocr_result_df = None
         st.session_state.ocr_plain_df = None
-        st.session_state.ocr_excel_output = None
+        # st.session_state.ocr_excel_output = None # 変更: 削除
         st.session_state.ocr_excel_df = None 
         st.session_state.ocr_image_bytes = None # [追加]
         st.session_state.current_page = 1
@@ -310,7 +311,7 @@ else: # Google認証済みの場合のみ以下を実行
         # ドライブ読み込み時は結果と選択状態をリセット
         st.session_state.ocr_result_df = None
         st.session_state.ocr_plain_df = None
-        st.session_state.ocr_excel_output = None
+        # st.session_state.ocr_excel_output = None # 変更: 削除
         st.session_state.ocr_excel_df = None 
         st.session_state.ocr_image_bytes = None # [追加]
         st.session_state.old_municipality = None
@@ -989,7 +990,7 @@ else: # Google認証済みの場合のみ以下を実行
 
                 if file_id:
                     #correct_image_url = f"[https://drive.google.com/file/d/](https://drive.google.com/file/d/){file_id}/view" # ← 【注意！！】画像のリンクがおかしくなるので使用しない
-                    correct_image_url = f"https://drive.google.com/file/d/{file_id}/view"
+                    correct_image_url = f"[https://drive.google.com/file/d/](https://drive.google.com/file/d/){file_id}/view"
                     cleaned_volume = extracted_volume.strip().strip('"') if extracted_volume else ""
                     
                     row_data_display[img_col_name] = f'<a href="{correct_image_url}" target="_blank"><img src="data:image/png;base64,{base64.b64encode(img_bytes_data).decode()}" style="max-height: 100px; display: block; margin: auto;"></a>' if img_bytes_data else ""
@@ -1081,7 +1082,7 @@ else: # Google認証済みの場合のみ以下を実行
     with st.sidebar:
         with st.container(border=True):
             st.header("1. Google Drive 設定")
-            st.info("以下のサービスアカウントを「**閲覧者**」以上の権限で、対象のGoogleドライブフォルダに共有してください。") 
+            st.info("以下のサービスアカウントを「**閲覧者**」以上の権限で、対象のGoogleドライブフォルダに共有してください。※フォルダは**マイドライブ**に配置されている必要があります。") 
             st.code("ocr-app@ai-project-427106.iam.gserviceaccount.com", language=None) 
             drive_url_input = st.text_input(
                 "読み込み元のGoogleドライブフォルダURL",
@@ -1090,7 +1091,7 @@ else: # Google認証済みの場合のみ以下を実行
 フォルダ構成：
 読み込み元のGoogleドライブフォルダ > ポータル名フォルダ（複数OK）> 画像ファイル
 ※画像ファイル名：品番.jpg
-　例） aedg001.jpg、 aedg001-1.jpg
+例） aedg001.jpg、 aedg001-1.jpg
 """
             )
 
@@ -1254,7 +1255,7 @@ else: # Google認証済みの場合のみ以下を実行
                         # --- 実行前に前回の結果をクリアする ---
                         st.session_state.ocr_result_df = None
                         st.session_state.ocr_plain_df = None
-                        st.session_state.ocr_excel_output = None
+                        # st.session_state.ocr_excel_output = None # 変更: 削除
                         st.session_state.ocr_excel_df = None 
                         st.session_state.ocr_image_bytes = None
                         st.session_state.current_page = 1
@@ -1286,12 +1287,13 @@ else: # Google認証済みの場合のみ以下を実行
                                     )
                                     if df is not None: 
                                         
-                                        try:
-                                            excel_data = create_excel_output(df_excel, st.session_state.portal_files)
-                                            st.session_state.ocr_excel_output = excel_data
-                                        except Exception as e:
-                                            st.error(f"Excelファイル生成中にエラーが発生しました: {e}")
-                                            st.session_state.ocr_excel_output = None
+                                        # 変更: Excelファイル生成ロジックを削除
+                                        # try:
+                                        #     excel_data = create_excel_output(df_excel, st.session_state.portal_files)
+                                        #     st.session_state.ocr_excel_output = excel_data
+                                        # except Exception as e:
+                                        #     st.error(f"Excelファイル生成中にエラーが発生しました: {e}")
+                                        #     st.session_state.ocr_excel_output = None
 
                                         st.session_state.ocr_result_df = df
                                         st.session_state.ocr_plain_df = df_plain
@@ -1404,14 +1406,15 @@ else: # Google認証済みの場合のみ以下を実行
         product_part = st.session_state.old_product_code if st.session_state.old_product_code != "すべて" else "all"
         business_part = st.session_state.old_business_code if st.session_state.old_business_code else "unknown"
         sheet_name = f"{municipality_name_safe}_{business_part}_{product_part}_{today_str}"
-        excel_file_name = f"ocr_result_{business_part}_{product_part}_{today_str}.xlsx"
+        # excel_file_name = f"ocr_result_{business_part}_{product_part}_{today_str}.xlsx" # 変更: 削除
 
-        show_excel_button = st.session_state.ocr_excel_output is not None
+        # show_excel_button = st.session_state.ocr_excel_output is not None # 変更: 削除
         show_gspread_button = 'ocr_excel_df' in st.session_state and \
                               st.session_state.ocr_excel_df is not None and \
                               not st.session_state.ocr_excel_df.empty
 
-        col_header_left, col_header_right = st.columns([3, 2])
+        # col_header_left, col_header_right = st.columns([3, 2]) # 元
+        col_header_left, col_header_right = st.columns([4, 1]) # 変更
         
         # --- _execute_gspread_save コールバック定義 ---
         def _execute_gspread_save():
@@ -1432,36 +1435,35 @@ else: # Google認証済みの場合のみ以下を実行
             try:
                 image_bytes_data = st.session_state.get("ocr_image_bytes", {})
 
+                # 変更: gid を初期化
+                gid = None 
+
                 # ユーザーに処理中であることを視覚的に伝える
                 with st.spinner("スプレッドシートに保存中..."):
-                    save_to_spreadsheet(
+                    # 変更: 戻り値(gid)を受け取る
+                    gid = save_to_spreadsheet(
                         st.session_state.ocr_excel_df, 
                         spreadsheet_id, 
-                        sheet_name,   
+                        sheet_name, 
                         google_creds_info, 
                         st.session_state.portal_files,
                         image_bytes_data
                     )
                 
-                #  GID（シートID）を取得してURLを生成
-                with st.spinner("シートURLを取得中..."):
-                    sheet_metadata = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-                    sheets = sheet_metadata.get('sheets', [])
-                    gid = None
-                    for s in sheets:
-                        if s.get('properties', {}).get('title') == sheet_name:
-                            gid = s.get('properties', {}).get('sheetId')
-                            break
-                
-                # 成功時
-                st.session_state.gspread_sheet_url_input = "" # 入力欄をクリア
-                
-                base_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/"
+                # 変更: GID取得API呼び出しブロック (with st.spinner("シートURLを取得中..."): ...) を削除
+
+                # 成功時 (gidがNoneでないことを確認)
                 if gid is not None:
+                    st.session_state.gspread_sheet_url_input = "" # 入力欄をクリア
+                    
+                    base_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/"
+                    # 変更: APIで検索せず、戻り値の gid をそのまま使う
                     st.session_state.gspread_save_success_url = f"{base_url}edit#gid={gid}" # GID付きURL
                 else:
-                    st.session_state.gspread_save_success_url = base_url # GIDが見つからなかった場合
-
+                    # save_to_spreadsheet が None を返した場合 (エラーメッセージは export.py 側で表示済み)
+                    if not st.session_state.gspread_save_error_message: # export.pyでエラーが補足されなかった場合
+                        st.session_state.gspread_save_error_message = "スプレッドシートへの保存に失敗しましたが、GIDが返されませんでした。"
+            
             except HttpError as e: # HttpErrorをキャッチ
                 st.session_state.gspread_save_error_message = f"スプレッドシート処理中にエラーが発生しました: {e}"
             except NameError as e:
@@ -1474,9 +1476,13 @@ else: # Google認証済みの場合のみ以下を実行
             with col_header_left:
                 st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 0 / {total_count}件</h2>", unsafe_allow_html=True)
             with col_header_right:
-                btn_col1, btn_col2 = st.columns(2)
-                btn_col1.button("スプレッドシートで保存", key="save_to_gspread_disabled", width='stretch', disabled=True)
-                btn_col2.button("Excelで保存", key="excel_dummy_disabled", width='stretch', disabled=True)
+                # btn_col1, btn_col2 = st.columns(2) # 元
+                # btn_col1.button("スプレッドシートで保存", key="save_to_gspread_disabled", width='stretch', disabled=True) # 元
+                # with btn_col2: # 元
+                #     pass # 変更: プレースホルダー
+                
+                # 変更: Excelボタンを削除し、スプレッドシートボタンのみ
+                st.button("スプレッドシートで保存", key="save_to_gspread_disabled", width='stretch', disabled=True)
             st.info("「表示ポータルの絞り込み」で表示するポータルを1つ以上選択してください。")
         else:
             # 1. 品番フィルター
@@ -1544,20 +1550,16 @@ else: # Google認証済みの場合のみ以下を実行
 
             # --- ボタン配置 ---
             with col_header_right:
-                btn_col1, btn_col2 = st.columns(2)
-                with btn_col1:
-                    # スプレッドシートボタンを削除し、passを記述
-                    pass
-
-                # 以下のブロックが削除されていないか確認してください
-                with btn_col2:
-                    if show_excel_button:
-                        b64 = base64.b64encode(st.session_state.ocr_excel_output).decode()
-                        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        href = f'<a href="data:{mime_type};base64,{b64}" download="{excel_file_name}" class="download-button-excel">Excelで保存</a>'
-                        st.markdown(href, unsafe_allow_html=True)
-                    else:
-                        st.button("Excelで保存", key="excel_dummy", width='stretch', disabled=True)
+                # btn_col1, btn_col2 = st.columns(2) # 元
+                # with btn_col1: # 元
+                #     pass # スプレッドシートボタンは L1410 で表示されるためここでは pass
+                # 
+                # with btn_col2: # 元
+                #     # 変更: Excelボタンのロジックを削除
+                #     pass
+                
+                # 変更: スプレッドシートボタンは L1410 で表示されるため、ここは空
+                pass
 
             all_columns = df_display_source.columns 
             final_columns_to_show = []
@@ -1637,7 +1639,9 @@ else: # Google認証済みの場合のみ以下を実行
             st.markdown("---") 
             with st.container(border=True):
                 st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>スプレッドシートに保存</h2>", unsafe_allow_html=True)
-                st.info(f"サイドメニューのサービスアカウントを「**編集者**」権限で対象のスプレッドシートに共有してください。また、画像フォルダの一般的なアクセスを「リンクを知っている全員」に設定してください。")
+                
+                # 変更: st.info の文言を修正し、リンクを追加
+                st.info(f"[こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)を**マイドライブ**にコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。コピーしたスプレッドシートのURLを以下に入力してください。")
                 
                 if st.session_state.gspread_save_error_message:
                     st.error(st.session_state.gspread_save_error_message, icon="🚨")
@@ -1659,17 +1663,20 @@ else: # Google認証済みの場合のみ以下を実行
 
     # --- OCR結果がまだない場合の表示 ---
     else:
-        col_header_left_c, col_header_right_c = st.columns([3, 2]) 
+        # col_header_left_c, col_header_right_c = st.columns([3, 2]) # 元
+        col_header_left_c, col_header_right_c = st.columns([4, 1]) # 変更
 
         with col_header_left_c:
             st.markdown("<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 0件</h2>", unsafe_allow_html=True)
 
         with col_header_right_c:
-            btn_col1, btn_col2 = st.columns(2)
-            with btn_col1:
-                pass # スプレッドシートボタン（非表示）
-            
-            with btn_col2:
-                pass # Excelボタンも非表示にする
+            # btn_col1, btn_col2 = st.columns(2) # 元
+            # with btn_col1: # 元
+            #     pass # スプレッドシートボタン（非表示）
+            # with btn_col2: # 元
+            #     pass # Excelボタンも非表示にする
+                
+            # 変更: Excelボタンを削除し、スプレッドシートボタン（無効）のみ
+            st.button("スプレッドシートで保存", key="save_to_gspread_disabled_c", width='stretch', disabled=True)
 
         st.info("サイドバーで設定を行い、「OCR実行」ボタンを押してください。")
