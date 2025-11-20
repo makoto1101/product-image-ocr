@@ -152,43 +152,108 @@ a.download-button-excel:active {
 
 /* --- ★テーブルコンテナと固定ヘッダー用のスタイル --- */
 .table-container {
-    max-height: 80vh; /* 画面の高さの70%を上限とする */
-    overflow-y: auto; /* 縦方向にスクロールバーを必要に応じて表示 */
+    max-height: 75vh;
+    overflow: auto;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #dee2e6;
 }
 
+/* テーブル自体の設定 */
 .custom_df {
-    border-collapse: collapse;
-    width: 100%;
-    /* 親コンテナに移動したため削除 */
-    /* border-radius: 10px; */
-    /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); */
+    width: max-content;         /* 中身に合わせて幅を確保 */
+    min-width: 100%;
+    border-collapse: separate;  /* stickyヘッダー用 */
+    border-spacing: 0;
 }
 
+/* --- 1. 全セルの基本設定（自動調整ベース） --- */
 .custom_df th, .custom_df td {
-    padding: 12px 15px;
+    padding: 8px 10px;          /* 余白を少し詰める */
     text-align: left;
-    border-bottom: 1px solid #dee2e6;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 14px; /* ← この行を追加 */
+    border-bottom: 1px solid #c2c2c2;
+    border-right: 1px solid #c2c2c2;
+    font-size: 16px;
+    vertical-align: middle;     /* 縦方向中央揃え */
+    
+    /* ★基本は小さめにして、内容に応じて広がるようにする */
+    min-width: 110px;           /* 最小幅を小さくリセット */
+    max-width: 400px;           /* テキストが長すぎる場合は折り返す */
+    
+    white-space: normal;        /* 折り返し許可 */
+    word-break: break-word;
 }
 
-.custom_df th {
-    font-weight: bold;
-    color: #495057;
-    /* ヘッダーをコンテナの最上部に固定する */
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background-color: #f8f9fa; /* 背景色を不透明にする */
+/* 左端の枠線 */
+.custom_df th:first-child, .custom_df td:first-child {
+    border-left: 1px solid #dee2e6;
 }
 
+/* --- 2. 列ごとの個別調整 --- */
+
+/* 1列目：No（固定幅・狭く） */
+.custom_df th:nth-child(1), .custom_df td:nth-child(1) {
+    width: 1% !important;        /* 内容に合わせて極限まで縮める設定 */
+    min-width: 30px !important;  /* ただし最低30pxは確保 */
+    max-width: 50px !important;  /* どんなに広くても50pxまで */
+    white-space: nowrap;         /* "No" の文字を折り返さない */
+    padding: 8px 4px !important; /* 左右の余白を狭くする */
+    text-align: center;
+}
+
+/* 2列目：画像名 */
+.custom_df th:nth-child(2), .custom_df td:nth-child(2) {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+/* ★ここを修正しました★
+   ステータス列がなくなったため、列番号が1つずつ前にずれています。
+   それに合わせて計算式を修正しました。
+   
+   [現在の並び順] 
+   1:No, 2:画像名, 3:画像1, 4:OCR1, 5:内容量1, 6:画像2...
+*/
+
+/* --- 画像列の設定 (3, 6, 9列目...) --- */
+.custom_df td:nth-child(3n) {
+    padding: 0 !important;      /* 余白を消す */
+    min-width: 100px;           /* 画像列の幅確保 */
+    min-height: 300px;           /* 画像列の幅確保 */
+}
+
+/* --- OCR列の設定 (4, 7, 10列目...) --- */
+.custom_df th:nth-child(3n+1), .custom_df td:nth-child(3n+1) {
+    min-width: 200px;           /* テキスト用に広さを確保 */
+    max-width: auto;           /* 長すぎる場合は折り返し */
+    white-space: normal;        /* 自動調整（折り返し）を有効に */
+}
+
+/* --- 内容量列の設定 (5, 8, 11列目...) --- */
+.custom_df th:nth-child(3n+2), .custom_df td:nth-child(3n+2) {
+    min-width: 100px;           /* 短いテキスト用に調整 */
+    max-width: auto;           /* 長すぎる場合は折り返し */
+    white-space: normal;
+}
+
+/* --- 画像自体の設定（ここは変更していません） --- */
+.custom_df td img {
+    display: block;             /* 隙間を消す */
+    width: 100%;                /* セル幅いっぱいに広げる */
+    min-width: 250px;           /* 画像自体の最小幅も確保 */
+    min-height: 250px;          /* auto ではなく、具体的な高さを指定して高さを確保 */
+    object-fit: cover;
+}
+
+/* ホバーエフェクト */
 .custom_df tbody tr:hover {
     background-color: #f1f3f5;
 }
+.custom_df tbody tr:hover td:hover {
+    background-color: #e9ecef;
+}
 
+/* リンク設定 */
 .custom_df a {
     text-decoration: none;
     color: inherit;
@@ -197,8 +262,55 @@ a.download-button-excel:active {
     height: 100%;
 }
 
+/* ヘッダー固定の再確認 */
+.custom_df th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 2px solid #b9bec2;
+}
+
 .custom_df tbody tr:hover td:hover {
     background-color: #e9ecef;
+}
+
+.image-mode-only .custom_df td img {
+    object-fit: contain !important;  /* 無理やり伸ばさず、全体を収める */
+    height: auto !important;         /* アスペクト比を維持 */
+    max-height: 300px !important;    /* 巨大になりすぎないよう上限を設定 */
+    background-color: transparent !important; /* 背景を透明にする */
+}
+
+/* --- 1列目 (No) の固定設定 --- */
+.custom_df th:nth-child(1),
+.custom_df td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 1;                  /* 通常セルより手前に表示 */
+    width: 50px !important;      /* 2列目の位置を合わせるため幅を固定 */
+    min-width: 50px !important;  
+    max-width: 50px !important;  
+    background-color: #ffffff;   /* 横スクロール時にデータが透けないように白背景を指定 */
+}
+
+/* --- 2列目 (画像名) の固定設定 --- */
+.custom_df th:nth-child(2),
+.custom_df td:nth-child(2) {
+    position: sticky;
+    left: 50px;                  /* 1列目の幅(50px)分だけ右にずらして配置 */
+    z-index: 1;
+    background-color: #ffffff;   /* 透け防止 */
+    border-right: 2px solid #dee2e6; /* 固定エリアの区切りを明確にする縦線 */
+}
+
+/* --- 固定列のヘッダー背景色 (左上エリア) --- */
+/* 「上固定」かつ「左固定」のエリアなので z-index を最強(3)にする必要があります */
+.custom_df th:nth-child(1),
+.custom_df th:nth-child(2) {
+    z-index: 3; 
+    background-color: #f8f9fa;   /* ヘッダーと同じグレー背景にする */
 }
 
 /* --- チェックボックスのスタイル --- */

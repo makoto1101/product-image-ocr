@@ -69,12 +69,12 @@ if not st.user.get("is_logged_in", False):
     # img_srcが空でない（画像が正しく読み込めた）場合のみ画像タグを表示
     image_tag = ""
     if img_src:
-        image_tag = f'<img src="{img_src}" style="vertical-align: middle; height: 55px;">'
+        image_tag = f'<img src="{img_src}" style="vertical-align: middle; height: 80px;">'
 
     st.markdown(f"""
-        <h1 style='font-size: 30px; text-align: center; margin-bottom: 50px;'>
+        <h1 style='font-size: 40px; text-align: center; margin-bottom: 30px;'>
             {image_tag}
-            商品画像OCR ログイン
+            商品画像OCR
         </h1>
     """, unsafe_allow_html=True)
 
@@ -1065,10 +1065,10 @@ else: # Google認証済みの場合のみ以下を実行
     with col1:
         image_tag = ""
         if 'img_src' in locals() and img_src: 
-            image_tag = f'<img src="{img_src}" style="vertical-align: middle; height: 55px;">'
+            image_tag = f'<img src="{img_src}" style="vertical-align: middle; height: 70px;">'
         
         st.markdown(f"""
-            <h2 style='font-size: 30px; font-weight: 600; margin-top: 5px; margin-bottom: 0px;'>
+            <h2 style='font-size: 35px; font-weight: 600; margin-top: 5px; margin-bottom: 0px;'>
                 {image_tag}
                 商品画像OCR
             </h2>
@@ -1595,7 +1595,16 @@ else: # Google認証済みの場合のみ以下を実行
                 styler.hide(axis="columns", subset=["ステータス"])
 
                 html_table = styler.to_html(escape=False, table_attributes='class="custom_df"')
-                st.markdown(f'<div class="table-container">{html_table}</div>', unsafe_allow_html=True)
+
+                # 表示列の状態によってCSSクラスを切り替える
+                # 「誤字脱字」と「内容量」の両方がONの時は通常モード
+                if show_ocr_cols and show_content_cols:
+                    container_class = "table-container"
+                else:
+                    # どちらか片方でもOFFなら、画像が見切れないモードにする
+                    container_class = "table-container image-mode-only"
+
+                st.markdown(f'<div class="{container_class}">{html_table}</div>', unsafe_allow_html=True)
             else:
                 st.info("フィルター条件に一致する結果がありません。")
 
