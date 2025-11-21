@@ -92,7 +92,7 @@ body {
     width: 550px !important;
 }
 
-/* --- キャンセルボタン（グレー）--- */
+/* --- サイドバー内 キャンセルボタン（グレー）--- */
 [data-testid="stSidebar"] div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stButton > button {
     background: linear-gradient(145deg, #868e96, #6c757d);
     box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff;
@@ -109,28 +109,22 @@ body {
     border-radius: 5px !important;
 }
 
-/* 念のため、一つ少ない階層も指定 */
 [data-testid="stProgressBar"] > div {
-    /* background-color: #f0f2f6;  */ /* 外側のバーの色はデフォルトのままにする */
-    border-radius: 5px !important; /* 角丸だけ適用 */
+    border-radius: 5px !important;
 }
 
-/* --- [修正] Excelダウンロードボタンのスタイル (青) --- */
+/* --- Excel保存ボタン (緑) --- */
 a.download-button-excel {
-    display: inline-block; /* st.button のような振る舞いにする */
-    width: 100%; /* コンテナ幅いっぱいに広げる */
-    box-sizing: border-box; /* paddingを含めてwidth 100%にするため */
-
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
     border: none !important;
     border-radius: 8px !important;
-    /* [変更] 上下のpaddingを小さくし、ログアウトボタンの高さに合わせる */
     padding: 8px 6px !important;
-    font-weight: 400 !important; /* 700 -> 400 */
+    font-weight: 400 !important;
     color: white !important;
-    text-decoration: none !important; /* リンクの下線を消す */
-    text-align: center; /* 文字を中央揃えに */
-
-    /* 青系の背景と影に変更 */
+    text-decoration: none !important;
+    text-align: center;
     background: linear-gradient(145deg, #5c87c9, #1c3457) !important;
     box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
     transition: all 0.2s ease-in-out !important;
@@ -139,305 +133,19 @@ a.download-button-excel {
 a.download-button-excel:hover {
     opacity: 0.9 !important;
     box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
-    color: white !important; /* ホバー時も文字色を白に固定 */
-    text-decoration: none !important; /* リンクの下線を消す */
+    color: white !important;
 }
 
 a.download-button-excel:active {
-    /* active時のスタイルも青系に合わせる */
     box-shadow: inset 4px 4px 8px #19355e, inset -4px -4px 8px #2c609c !important;
-    color: white !important; /* 念のため */
-    text-decoration: none !important; /* リンクの下線を消す */
-}
-
-/* --- ★テーブルコンテナと固定ヘッダー用のスタイル --- */
-.table-container {
-    max-height: 75vh;
-    overflow: auto;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    border: 1px solid #dee2e6;
-}
-
-/* テーブル自体の設定 */
-.custom_df {
-    width: max-content;         /* 中身に合わせて幅を確保 */
-    min-width: 100%;
-    border-collapse: separate;  /* stickyヘッダー用 */
-    border-spacing: 0;
-}
-
-/* --- 1. 全セルの基本設定（自動調整ベース） --- */
-.custom_df th, .custom_df td {
-    padding: 8px 10px;          /* 余白を少し詰める */
-    text-align: left;
-    border-bottom: 1px solid #c2c2c2;
-    border-right: 1px solid #c2c2c2;
-    font-size: 16px;
-    vertical-align: middle;     /* 縦方向中央揃え */
-    
-    /* ★基本は小さめにして、内容に応じて広がるようにする */
-    min-width: 110px;           /* 最小幅を小さくリセット */
-    max-width: 400px;           /* テキストが長すぎる場合は折り返す */
-    
-    white-space: normal;        /* 折り返し許可 */
-    word-break: break-word;
-}
-
-/* 左端の枠線 */
-.custom_df th:first-child, .custom_df td:first-child {
-    border-left: 1px solid #dee2e6;
-}
-
-/* --- 2. 列ごとの個別調整 --- */
-
-/* 1列目：No（固定幅・狭く） */
-.custom_df th:nth-child(1), .custom_df td:nth-child(1) {
-    width: 1% !important;        /* 内容に合わせて極限まで縮める設定 */
-    min-width: 30px !important;  /* ただし最低30pxは確保 */
-    max-width: 50px !important;  /* どんなに広くても50pxまで */
-    white-space: nowrap;         /* "No" の文字を折り返さない */
-    padding: 8px 4px !important; /* 左右の余白を狭くする */
-    text-align: center;
-}
-
-/* 2列目：画像名 */
-.custom_df th:nth-child(2), .custom_df td:nth-child(2) {
-    min-width: 200px;
-    max-width: 300px;
-}
-
-/* ★ここを修正しました★
-   ステータス列がなくなったため、列番号が1つずつ前にずれています。
-   それに合わせて計算式を修正しました。
-   
-   [現在の並び順] 
-   1:No, 2:画像名, 3:画像1, 4:OCR1, 5:内容量1, 6:画像2...
-*/
-
-/* --- 画像列の設定 (3, 6, 9列目...) --- */
-.custom_df td:nth-child(3n) {
-    padding: 0 !important;      /* 余白を消す */
-    min-width: 100px;           /* 画像列の幅確保 */
-    min-height: 300px;           /* 画像列の幅確保 */
-}
-
-/* --- OCR列の設定 (4, 7, 10列目...) --- */
-.custom_df th:nth-child(3n+1), .custom_df td:nth-child(3n+1) {
-    min-width: 200px;           /* テキスト用に広さを確保 */
-    max-width: auto;           /* 長すぎる場合は折り返し */
-    white-space: normal;        /* 自動調整（折り返し）を有効に */
-}
-
-/* --- 内容量列の設定 (5, 8, 11列目...) --- */
-.custom_df th:nth-child(3n+2), .custom_df td:nth-child(3n+2) {
-    min-width: 100px;           /* 短いテキスト用に調整 */
-    max-width: auto;           /* 長すぎる場合は折り返し */
-    white-space: normal;
-}
-
-/* --- 画像自体の設定（ここは変更していません） --- */
-.custom_df td img {
-    display: block;             /* 隙間を消す */
-    width: 100%;                /* セル幅いっぱいに広げる */
-    min-width: 250px;           /* 画像自体の最小幅も確保 */
-    min-height: 250px;          /* auto ではなく、具体的な高さを指定して高さを確保 */
-    object-fit: cover;
-}
-
-/* ホバーエフェクト */
-.custom_df tbody tr:hover {
-    background-color: #f1f3f5;
-}
-.custom_df tbody tr:hover td:hover {
-    background-color: #e9ecef;
-}
-
-/* リンク設定 */
-.custom_df a {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
-/* ヘッダー固定の再確認 */
-.custom_df th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    border-bottom: 2px solid #b9bec2;
-}
-
-.custom_df tbody tr:hover td:hover {
-    background-color: #e9ecef;
-}
-
-.image-mode-only .custom_df td img {
-    object-fit: contain !important;  /* 無理やり伸ばさず、全体を収める */
-    height: auto !important;         /* アスペクト比を維持 */
-    max-height: 300px !important;    /* 巨大になりすぎないよう上限を設定 */
-    background-color: transparent !important; /* 背景を透明にする */
-}
-
-/* --- 1列目 (No) の固定設定 --- */
-.custom_df th:nth-child(1),
-.custom_df td:nth-child(1) {
-    position: sticky;
-    left: 0;
-    z-index: 1;                  /* 通常セルより手前に表示 */
-    width: 50px !important;      /* 2列目の位置を合わせるため幅を固定 */
-    min-width: 50px !important;  
-    max-width: 50px !important;  
-    background-color: #ffffff;   /* 横スクロール時にデータが透けないように白背景を指定 */
-}
-
-/* --- 2列目 (画像名) の固定設定 --- */
-.custom_df th:nth-child(2),
-.custom_df td:nth-child(2) {
-    position: sticky;
-    left: 50px;                  /* 1列目の幅(50px)分だけ右にずらして配置 */
-    z-index: 1;
-    background-color: #ffffff;   /* 透け防止 */
-    border-right: 2px solid #dee2e6; /* 固定エリアの区切りを明確にする縦線 */
-}
-
-/* --- 固定列のヘッダー背景色 (左上エリア) --- */
-/* 「上固定」かつ「左固定」のエリアなので z-index を最強(3)にする必要があります */
-.custom_df th:nth-child(1),
-.custom_df th:nth-child(2) {
-    z-index: 3; 
-    background-color: #f8f9fa;   /* ヘッダーと同じグレー背景にする */
-}
-
-/* --- チェックボックスのスタイル --- */
-/* チェックが入った時の背景色と枠線の色を青に設定 */
-div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div[aria-checked="true"] {
-    background-color: #0d6efd !important;
-    border-color: #0d6efd !important;
-}
-/* チェック前の枠線の色を青に設定 */
-div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div {
-    border-color: #0d6efd !important;
-}
-
-/* --- マルチセレクトの選択済みアイテム --- */
-/* 選択されたアイテム（タグ）の背景色を青に設定 */
-div[data-baseweb="tag"] {
-    background-color: #0d6efd !important;
-}
-/* タグ内のテキスト色を白に設定 */
-div[data-baseweb="tag"] span {
-    color: white !important;
-}
-/* タグ内の削除ボタン(x)のアイコン色を白に設定 */
-div[data-baseweb="tag"] [aria-label="Remove item"] {
     color: white !important;
 }
 
-/* --- メインコンテンツのコンテナ（フィルターエリアなど） --- */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-/* --- トーストの背景色（緑）と位置（右下） --- */
-[data-testid="stToast"] {
-    background-color: #8de6a2; 
-    color: #000000; 
-    
-    /* ▼▼▼ 以下4行を追加 ▼▼▼ */
-    top: auto !important;     /* 上の位置指定を解除 */
-    bottom: 2rem !important;  /* 下から 2rem (約32px) の位置に指定 */
-    right: 2rem !important;   /* 右から 2rem (約32px) の位置に指定 */
-    left: auto !important;    /* 左の位置指定を解除 */
-}
-
-/* トースト内の閉じるボタン（X）も白にする */
-[data-testid="stToast"] button {
-    color: white;
-}
-
-/* --- ログアウトボタン（グレー）--- */
-/* key="logout_button" に対応 */
-[data-testid="stButton-logout_button"] {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    color: white !important;
-    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
-    border: none !important;
-}
-
-[data-testid="stButton-logout_button"]:hover {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    opacity: 0.9 !important;
-    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
-    color: white !important;
-}
-
-[data-testid="stButton-logout_button"]:active {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
-}
-
-/* --- ページネーションボタン（グレー）--- */
-/* key="page_first", "page_prev", "page_next", "page_last" に対応 */
-[data-testid="stButton-page_first"],
-[data-testid="stButton-page_prev"],
-[data-testid="stButton-page_next"],
-[data-testid="stButton-page_last"] {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    color: white !important;
-    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
-    border: none !important;
-}
-
-[data-testid="stButton-page_first"]:hover,
-[data-testid="stButton-page_prev"]:hover,
-[data-testid="stButton-page_next"]:hover,
-[data-testid="stButton-page_last"]:hover {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    opacity: 0.9 !important;
-    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
-    color: white !important;
-}
-
-[data-testid="stButton-page_first"]:active,
-[data-testid="stButton-page_prev"]:active,
-[data-testid="stButton-page_next"]:active,
-[data-testid="stButton-page_last"]:active {
-    background: linear-gradient(145deg, #868e96, #6c757d) !important;
-    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
-}
-
-/* --- ページネーションボタン（非アクティブ時）--- */
-/* :disabled 状態（リクエスト通り、薄いグレー） */
-[data-testid="stButton-page_first"]:disabled,
-[data-testid="stButton-page_prev"]:disabled,
-[data-testid="stButton-page_next"]:disabled,
-[data-testid="stButton-page_last"]:disabled {
-    /* Streamlitのデフォルトグレーボタンに戻す */
-    background: #e9ecef !important;
-    color: #adb5bd !important;
-    border: 1px solid #ced4da !important;
-    box-shadow: none !important;
-}
-
-/* Streamlitのメインコンテナの上部余白を強制的に減らす */
-div.block-container {
-    padding-top: 2.5rem;
-}
-
-
-/* --- Excel保存ボタン (緑) --- */
 [data-testid="stDownloadButton-download_excel_button"] > button {
     background: linear-gradient(145deg, #5adb9f, #146c43) !important;
     color: white !important;
     box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
     border: none !important;
-    
-    /* st.download_button は高さ調整の padding-top/bottom が必要 */
     padding-top: 8px !important;
     padding-bottom: 8px !important;
     font-weight: 400 !important;
@@ -453,4 +161,337 @@ div.block-container {
 [data-testid="stDownloadButton-download_excel_button"] > button:active {
     background: linear-gradient(145deg, #5adb9f, #146c43) !important;
     box-shadow: inset 4px 4px 8px #105535, inset -4px -4px 8px #22b973 !important;
+}
+
+/* ==================================================
+   ▼▼▼ テーブル関連のスタイル ▼▼▼
+   ================================================== */
+
+/* コンテナ設定 */
+.table-container {
+    max-height: 75vh;
+    overflow: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #dee2e6;
+}
+
+/* テーブル自体の設定 */
+.custom_df {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;  /* stickyヘッダー用 */
+    border-spacing: 0;
+}
+
+/* --- 全セルの基本設定 --- */
+.custom_df th, .custom_df td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #c2c2c2;
+    border-right: 1px solid #c2c2c2;
+    font-size: 16px;
+    vertical-align: middle;
+    min-width: 110px;
+    max-width: 400px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* 左端の枠線 */
+.custom_df th:first-child, .custom_df td:first-child {
+    border-left: 1px solid #dee2e6;
+}
+
+/* リンク設定 */
+.custom_df a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ヘッダー固定設定 */
+.custom_df th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #b9bec2;
+}
+
+/* --- 列ごとの個別調整 --- */
+
+/* 1列目：No（固定幅・狭く） */
+.custom_df th:nth-child(1), .custom_df td:nth-child(1) {
+    width: 1% !important;
+    min-width: 30px !important;
+    max-width: 50px !important;
+    white-space: nowrap;
+    padding: 8px 4px !important;
+    text-align: center;
+}
+
+/* 2列目：画像名 */
+.custom_df th:nth-child(2), .custom_df td:nth-child(2) {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+/* 画像列の設定 (3, 6, 9列目...) */
+.custom_df td:nth-child(3n) {
+    padding: 0 !important;
+    min-width: 100px;
+    min-height: 300px;
+}
+
+/* OCR列の設定 (4, 7, 10列目...) */
+.custom_df th:nth-child(3n+1), .custom_df td:nth-child(3n+1) {
+    min-width: 200px;
+    max-width: auto;
+    white-space: normal;
+}
+
+/* 内容量列の設定 (5, 8, 11列目...) */
+.custom_df th:nth-child(3n+2), .custom_df td:nth-child(3n+2) {
+    min-width: 100px;
+    max-width: auto;
+    white-space: normal;
+}
+
+/* --- 画像自体の設定（通常モード：cover） --- */
+.custom_df td img {
+    display: block;
+    width: 100%;
+    min-width: 250px;
+    min-height: 250px;
+    object-fit: cover;
+}
+
+/* --- 列の固定（Noと画像名） --- */
+
+/* 1列目 (No) */
+.custom_df th:nth-child(1),
+.custom_df td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    background-color: #ffffff; /* 横スクロール時の透け防止 */
+}
+
+/* 2列目 (画像名) */
+.custom_df th:nth-child(2),
+.custom_df td:nth-child(2) {
+    position: sticky;
+    left: 50px; /* 1列目の幅分ずらす */
+    z-index: 1;
+    background-color: #ffffff;
+    border-right: 2px solid #dee2e6;
+}
+
+/* 固定列ヘッダーのz-index調整 */
+.custom_df th:nth-child(1),
+.custom_df th:nth-child(2) {
+    z-index: 3;
+    background-color: #f8f9fa;
+}
+
+/* ==================================================
+   ▼▼▼ モード別の表示制御 ▼▼▼
+   ================================================== */
+
+/* --- 1. 画像モード（テキスト列非表示時） --- */
+/* app.pyで「image-mode-only」クラスが付与された時 */
+.image-mode-only .custom_df td img {
+    object-fit: contain !important;  /* 見切れ防止 */
+    height: auto !important;
+    max-height: 300px !important;
+    background-color: transparent !important; /* 背景透明 */
+}
+
+/* --- 2. 全体表示モード（Fit Mode） --- */
+/* app.pyで「fit-mode」クラスが付与された時 */
+
+/* 横スクロールを消す */
+.fit-mode.table-container {
+    overflow-x: hidden !important;
+}
+
+/* 表幅を画面に合わせる */
+.fit-mode .custom_df {
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+
+/* セル幅を自動調整、文字サイズ縮小 */
+.fit-mode .custom_df th, 
+.fit-mode .custom_df td {
+    min-width: auto !important;
+    width: auto !important;
+    white-space: normal !important;
+    font-size: 14px !important;
+}
+
+/* No列だけは最小幅確保 */
+.fit-mode .custom_df th:nth-child(1), 
+.fit-mode .custom_df td:nth-child(1) {
+    width: 30px !important;
+    min-width: 30px !important;
+}
+
+/* 画像設定：全体表示用に調整 */
+.fit-mode .custom_df td img {
+    object-fit: contain !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 150px !important;
+    min-height: auto !important;
+    min-width: auto !important;
+    background-color: transparent !important;
+}
+
+/* --- 全体表示時の列固定解除 --- */
+/* ヘッダー：上固定(sticky)は維持、左固定のみ解除 */
+.fit-mode .custom_df th:nth-child(1),
+.fit-mode .custom_df th:nth-child(2) {
+    position: sticky !important;
+    top: 0 !important;
+    left: auto !important; /* 左固定解除 */
+    border-right: 1px solid #c2c2c2 !important;
+    z-index: 2 !important;
+    background-color: #f8f9fa !important;
+}
+
+/* データセル：固定完全解除 */
+.fit-mode .custom_df td:nth-child(1),
+.fit-mode .custom_df td:nth-child(2) {
+    position: static !important;
+    border-right: 1px solid #c2c2c2 !important;
+    z-index: auto !important;
+}
+
+/* ==================================================
+   ▼▼▼ その他のUI要素 ▼▼▼
+   ================================================== */
+
+/* チェックボックス */
+div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div[aria-checked="true"] {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+div[data-testid="stCheckbox"] > label > div[data-baseweb="checkbox"] > div {
+    border-color: #0d6efd !important;
+}
+
+/* マルチセレクト */
+div[data-baseweb="tag"] {
+    background-color: #0d6efd !important;
+}
+div[data-baseweb="tag"] span,
+div[data-baseweb="tag"] [aria-label="Remove item"] {
+    color: white !important;
+}
+
+/* コンテナの影 */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* トースト通知 */
+[data-testid="stToast"] {
+    background-color: #8de6a2; 
+    color: #000000; 
+    top: auto !important;
+    bottom: 2rem !important;
+    right: 2rem !important;
+    left: auto !important;
+}
+[data-testid="stToast"] button {
+    color: white;
+}
+
+/* ログアウトボタン（グレー） */
+[data-testid="stButton-logout_button"] {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    color: white !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    border: none !important;
+}
+[data-testid="stButton-logout_button"]:hover {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important;
+}
+[data-testid="stButton-logout_button"]:active {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
+}
+
+/* ページネーションボタン（グレー） */
+[data-testid="stButton-page_first"],
+[data-testid="stButton-page_prev"],
+[data-testid="stButton-page_next"],
+[data-testid="stButton-page_last"] {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    color: white !important;
+    box-shadow: 4px 4px 10px #cccccc, -4px -4px 10px #ffffff !important;
+    border: none !important;
+}
+[data-testid="stButton-page_first"]:hover,
+[data-testid="stButton-page_prev"]:hover,
+[data-testid="stButton-page_next"]:hover,
+[data-testid="stButton-page_last"]:hover {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    opacity: 0.9 !important;
+    box-shadow: 2px 2px 5px #bbbbbb, -2px -2px 5px #ffffff !important;
+    color: white !important;
+}
+[data-testid="stButton-page_first"]:active,
+[data-testid="stButton-page_prev"]:active,
+[data-testid="stButton-page_next"]:active,
+[data-testid="stButton-page_last"]:active {
+    background: linear-gradient(145deg, #868e96, #6c757d) !important;
+    box-shadow: inset 4px 4px 8px #5a6268, inset -4px -4px 8px #9098a0 !important;
+}
+[data-testid="stButton-page_first"]:disabled,
+[data-testid="stButton-page_prev"]:disabled,
+[data-testid="stButton-page_next"]:disabled,
+[data-testid="stButton-page_last"]:disabled {
+    background: #e9ecef !important;
+    color: #adb5bd !important;
+    border: 1px solid #ced4da !important;
+    box-shadow: none !important;
+}
+
+/* 余白調整 */
+div.block-container {
+    padding-top: 2.5rem;
+}
+
+/* ==================================================
+   ▼▼▼ ホバー時のハイライト制御 ▼▼▼
+   ================================================== */
+
+/* 背景色を上書きするのではなく、
+   「box-shadow」を使って「半透明の黒」を内側に重ねることで、
+   どんな背景色（白でも赤でも）であっても、その色のまま暗くします。
+*/
+
+/* 1. 行にカーソルが乗った時：行全体を「5%暗く」する */
+.custom_df tbody tr:hover td {
+    /* 背景色は変更せず、薄い黒の影を内側に敷く */
+    box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.05) !important;
+    transition: box-shadow 0.1s;
+}
+
+/* 2. さらに、そのセル自体にカーソルが乗った時：「10%暗く」する */
+.custom_df tbody tr:hover td:hover {
+    /* 少し濃い黒の影を内側に敷く */
+    box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.1) !important;
 }
