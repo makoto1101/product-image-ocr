@@ -341,7 +341,7 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
                         if isinstance(url_value, str) and url_value.startswith('http'):
                             # URL文字列を " でエスケープし、=HYPERLINK() 数式を作成
                             # 表示名を "画像リンク" にする
-                            return f'=HYPERLINK("{url_value}", "{url_value}")'
+                            return f'=HYPERLINK("{url_value}")'
                         return "" # URLでない場合は空
 
                     df_excel_gspread[col_name] = df_excel_gspread[col_name].apply(create_hyperlink_formula)
