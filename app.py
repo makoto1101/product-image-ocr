@@ -1082,7 +1082,9 @@ else: # Google認証済みの場合のみ以下を実行
     with st.sidebar:
         with st.container(border=True):
             st.header("1. Google Drive 設定")
-            st.info("以下のサービスアカウントを「**閲覧者**」以上の権限で、対象のGoogleドライブフォルダに共有してください。※フォルダは**マイドライブ**に配置されている必要があります。") 
+            st.info("""以下のサービスアカウントを「**閲覧者**」以上の権限で、対象のGoogleドライブフォルダに共有してください。フォルダは**マイドライブ**に配置されている必要があります。
+
+共有ドライブからマイドライブへのコピーは[**こちら**](https://script.google.com/a/macros/steamship.co.jp/s/AKfycbxfHwqxcl-tAnUOsx8OT9lHa2c4DV13VivUMt6CFC6dtDRweQOI53RT5mAP-5VVB5KF/exec)をご利用ください。""")
             st.code("ocr-app@ai-project-427106.iam.gserviceaccount.com", language=None) 
             drive_url_input = st.text_input(
                 "読み込み元のGoogleドライブフォルダURL",
@@ -1391,7 +1393,7 @@ else: # Google認証済みの場合のみ以下を実行
         if show_gspread_button:
             # 入力フォームとボタンは Expander の中
             with st.expander("スプレッドシートに保存", expanded=False):
-                st.info(f"[こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)を**マイドライブ**にコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。コピーしたスプレッドシートのURLを以下に入力してください。")
+                st.info(f"[**こちらのスプレッドシート**](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)を**マイドライブ**にコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。コピーしたスプレッドシートのURLを以下に入力して「保存」ボタンを押下してください。")
                 
                 st.text_input(
                     "GoogleスプレッドシートURL", 

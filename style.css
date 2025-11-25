@@ -495,3 +495,9 @@ div.block-container {
     /* 少し濃い黒の影を内側に敷く */
     box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.1) !important;
 }
+
+/* --- サイドバー内の st.info (青いボックス) の文字サイズ調整 --- */
+[data-testid="stSidebar"] [data-testid="stAlert"] p {
+    font-size: 16px !important; /* お好みのサイズに変更してください (デフォルトは16px程度) */
+    line-height: 1.2 !important;
+}
