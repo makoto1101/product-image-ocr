@@ -501,3 +501,45 @@ div.block-container {
     font-size: 16px !important; /* お好みのサイズに変更してください (デフォルトは16px程度) */
     line-height: 1.2 !important;
 }
+
+/* ==================================================
+   ▼▼▼ 操作マニュアル ▼▼▼
+   ================================================== */
+ button[kind="tertiary"] {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #0d6efd !important;
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+}
+button[kind="tertiary"]:hover {
+    color: #0a58ca !important;
+    text-decoration: none !important;
+}
+button[kind="tertiary"]:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+/* ボタンのコンテナの余白調整 */
+div[data-testid="stButton"] {
+    display: inline-block;
+    margin-top: 5px;
+}
+
+[data-testid="stMarkdownContainer"] blockquote {
+    color: #000000 !important; /* 文字色を濃いグレー（ほぼ黒）に設定 */
+    border-left-color: #ff5664 !important; /* 左側の線を少し濃く */
+    background-color: #fff7f8 !important; /* 背景色を薄いグレーにして読みやすく */
+}
+
+/* テーブルのスタイル調整 */
+/* ヘッダー行の背景色を薄いグレーに */
+[data-testid="stMarkdownContainer"] table thead tr th {
+    background-color: #f0f2f6 !important;
+}
+/* 1列目（項目列）の背景色を薄いグレーに */
+[data-testid="stMarkdownContainer"] table tbody tr td:first-child {
+    background-color: #f0f2f6 !important;
+}

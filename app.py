@@ -20,6 +20,8 @@ import os
 from neng_api import get_neng_content
 # [削除] create_excel_output のインポートを削除
 from export import save_to_spreadsheet
+# [追加] 操作マニュアルのインポート
+from manual import show_instructions
 
 
 # --- Streamlit ページ設定 ---
@@ -1061,7 +1063,7 @@ else: # Google認証済みの場合のみ以下を実行
         return df_display, df_plain_text_for_search, df_excel, all_image_bytes_data
 
     # --- Streamlit UI ---
-    col1, col2 = st.columns([4, 1]) 
+    col1, col2 = st.columns([4, 1.5]) 
     with col1:
         image_tag = ""
         if 'img_src' in locals() and img_src: 
@@ -1073,6 +1075,11 @@ else: # Google認証済みの場合のみ以下を実行
                 商品画像OCR
             </h2>
         """, unsafe_allow_html=True)
+
+        # 操作マニュアルボタンの配置
+        if st.button("📖 操作マニュアル", type="tertiary"):
+            show_instructions()
+
     with col2:
         st.markdown(f"<div style='text-align: center; margin-bottom: 1px;'>ようこそ！ <strong>{st.user.name}</strong> さん</div>", unsafe_allow_html=True) 
         if st.button("ログアウト", icon=":material/logout:", width='stretch', key="logout_button"): 
@@ -1090,8 +1097,8 @@ else: # Google認証済みの場合のみ以下を実行
                 "読み込み元のGoogleドライブフォルダURL",
                 key="drive_url_input_key",
                 help="""
-フォルダ構成：
-読み込み元のGoogleドライブフォルダ > ポータル名フォルダ（複数OK）> 画像ファイル
+【フォルダ構成・画像ファイル名ルール】\n
+URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数OK） ＞ 画像ファイル（複数OK）\n
 ※画像ファイル名：品番.jpg
 　例） aedg001.jpg、 aedg001-1.jpg
 """
@@ -1220,9 +1227,9 @@ else: # Google認証済みの場合のみ以下を実行
         with st.container(border=True):
             st.header("3. OCR実行")
             run_disabled = not (selected_business_code and selected_municipality_name is not None) \
-                           or st.session_state.show_clear_confirmation \
-                           or st.session_state.show_drive_clear_confirmation \
-                           or not st.session_state.portal_files 
+                            or st.session_state.show_clear_confirmation \
+                            or st.session_state.show_drive_clear_confirmation \
+                            or not st.session_state.portal_files 
 
             if st.button("OCR実行", type="primary", width='stretch', disabled=run_disabled):
                 st.session_state.old_municipality = selected_municipality_name
