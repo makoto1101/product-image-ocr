@@ -126,7 +126,7 @@ else: # Google認証済みの場合のみ以下を実行
         js = """
         <script>
             setTimeout(function() {
-                // ページ全体のドキュメント要素とbody要素の両方に対してスクロールを実行
+                # ページ全体のドキュメント要素とbody要素の両方に対してスクロールを実行
                 window.parent.document.body.scrollTop = window.parent.document.body.scrollHeight;
                 window.parent.document.documentElement.scrollTop = window.parent.document.documentElement.scrollHeight;
             }, 100);
@@ -841,7 +841,7 @@ else: # Google認証済みの場合のみ以下を実行
                     semaphore,
                     neng_content_map 
                 )
-                 for name, data in image_groups.items()]
+                for name, data in image_groups.items()]
         results = []
         # as_completed で完了したものから順次処理
         for i, future in enumerate(asyncio.as_completed(tasks)):
@@ -1431,12 +1431,19 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         # --- フィルターUI ---
         filter_col, view_col = st.columns(2)
         with view_col:
+            # --- [変更] UI部分 ---
             with st.container(border=True):
                 st.markdown("##### 表示列の設定")
-                cc1, cc2 = st.columns(2)
+                # カラムを3つにする
+                cc1, cc2, cc3 = st.columns(3)
+                
                 with cc1:
-                    show_ocr_cols = st.checkbox("誤字脱字", value=True, help="OCR/テキスト比較/誤字脱字列を表示")
+                    # [追加] テキスト比較のチェックボックス
+                    show_text_compare = st.checkbox("テキスト比較", value=True, help="テキスト比較列を表示")
                 with cc2:
+                    # [変更] ヘルプテキストから「テキスト比較」を削除
+                    show_ocr_cols = st.checkbox("誤字脱字", value=True, help="OCR/誤字脱字列を表示")
+                with cc3:
                     show_content_cols = st.checkbox("内容量", value=True, help="内容量/NENG/内容量比較列を表示")
 
                 with st.expander("表示ポータルの絞り込み"):
@@ -1466,16 +1473,23 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
         # --- テーブル表示 ---
-        def highlight_row(row, ocr_visible, content_visible):
+        # --- [変更] テーブル表示用ハイライト関数 ---
+        # 引数に text_compare_visible を追加
+        def highlight_row(row, ocr_visible, content_visible, text_compare_visible):
             style = ''
             has_visible_error = False
 
             if "エラー検出" in row and "失敗あり" in str(row["エラー検出"]):
                 has_visible_error = True
 
-            if ocr_visible and not has_visible_error:
+            # [追加] テキスト比較が表示されている場合のみチェック
+            if text_compare_visible and not has_visible_error:
                 if "テキスト比較" in row and "差分あり" in str(row["テキスト比較"]):
                     has_visible_error = True
+
+            # [変更] ocr_visible のブロックからテキスト比較の判定を削除
+            if ocr_visible and not has_visible_error:
+                # ここから「テキスト比較」の判定を削除しました
                 if "誤字脱字" in row and '<span style="color: blue;">OK！</span>' not in str(row["誤字脱字"]):
                     has_visible_error = True
 
@@ -1527,9 +1541,17 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                     if col in ["No", "画像名", "ステータス", "エラー検出"]:
                         visible_columns.append(col)
                         continue
-                    if col in ["テキスト比較", "誤字脱字"] and show_ocr_cols:
+                    
+                    # [追加] テキスト比較の制御
+                    if col == "テキスト比較" and show_text_compare:
                         visible_columns.append(col)
                         continue
+                    
+                    # [変更] 誤字脱字のみ show_ocr_cols で制御
+                    if col == "誤字脱字" and show_ocr_cols:
+                        visible_columns.append(col)
+                        continue
+                    
                     if col in ["NENG内容量", "内容量比較"] and show_content_cols:
                         visible_columns.append(col)
                         continue
@@ -1548,7 +1570,8 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
 
                 df_visible_cols_only = df_filtered_before_status[visible_columns]
                 is_row_highlighted = df_visible_cols_only.apply(
-                    lambda row: 'background-color: #ffe5e5' in highlight_row(row, show_ocr_cols, show_content_cols)[0],
+                    # [変更] 引数に text_compare_visible=show_text_compare を追加
+                    lambda row: 'background-color: #ffe5e5' in highlight_row(row, show_ocr_cols, show_content_cols, show_text_compare)[0],
                     axis=1
                 )
 
@@ -1573,10 +1596,20 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
             col_header_left, col_header_right = st.columns([3, 2], vertical_alignment="bottom")
 
             with col_header_left:
-                if is_filtered and filtered_count != total_count:
-                    st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 {filtered_count} / {total_count}件</h2>", unsafe_allow_html=True)
+                # フィルター適用後のデータフレームから「要確認」が含まれる行数をカウント
+                need_check_count = df_to_process['ステータス'].astype(str).str.contains("要確認").sum()
+                
+                # 件数が1件以上ある場合のみ表示
+                if need_check_count > 0:
+                    # 全体を少し小さく(0.8em)し、カッコは黒字、中の文字だけ赤色にする
+                    check_status_html = f"<span style='font-size: 0.8em;'>（<span style='color: red;'>要確認 {need_check_count}件</span>）</span>"
                 else:
-                    st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 {total_count}件</h2>", unsafe_allow_html=True)
+                    check_status_html = ""
+
+                if is_filtered and filtered_count != total_count:
+                    st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 {filtered_count} / {total_count}件 {check_status_html}</h2>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<h2 style='font-size: 20px; font-weight: 600; margin-bottom: 0px;'>実行結果 {total_count}件 {check_status_html}</h2>", unsafe_allow_html=True)
 
             is_zoom_mode = False # 初期化
             with col_header_right:
@@ -1592,9 +1625,17 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 if col in ["No", "画像名", "ステータス", "エラー検出"]:
                     final_columns_to_show.append(col)
                     continue
-                if col in ["テキスト比較", "誤字脱字"] and show_ocr_cols:
+                
+                # [追加] テキスト比較の独立制御
+                if col == "テキスト比較" and show_text_compare:
                     final_columns_to_show.append(col)
                     continue
+                
+                # [変更] 誤字脱字のみ show_ocr_cols で制御
+                if col == "誤字脱字" and show_ocr_cols:
+                    final_columns_to_show.append(col)
+                    continue
+                    
                 if col in ["NENG内容量", "内容量比較"] and show_content_cols:
                     final_columns_to_show.append(col)
                     continue
@@ -1626,7 +1667,8 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
 
             if not df_paginated.empty:
                 from functools import partial 
-                highlight_func = partial(highlight_row, ocr_visible=show_ocr_cols, content_visible=show_content_cols)
+                # [変更] text_compare_visible を追加
+                highlight_func = partial(highlight_row, ocr_visible=show_ocr_cols, content_visible=show_content_cols, text_compare_visible=show_text_compare)
                 styler = df_paginated.style.apply(highlight_func, axis=1)
 
                 styler.hide(axis="index") 
@@ -1639,7 +1681,8 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 container_classes = ["table-container"]
                 
                 # 1. 画像モード判定（チェックボックスの状態）
-                if not (show_ocr_cols and show_content_cols):
+                # [変更] show_text_compare も条件に追加（すべてOFFの場合などレイアウト崩れ防止のため）
+                if not (show_ocr_cols and show_content_cols and show_text_compare):
                     container_classes.append("image-mode-only")
                 
                 # 2. 全体表示モード判定（トグルスイッチの状態）
