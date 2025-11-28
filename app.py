@@ -677,6 +677,48 @@ else: # Google認証済みの場合のみ以下を実行
             return "OK！" if result_json.get("result") == "ok" else "要確認"
         except (json.JSONDecodeError, AttributeError):
             return "要確認" # JSON解析失敗や result キーがない場合は「要確認」扱い
+        
+    # テキストの意味的一致を確認するAI関数
+    async def compare_text_content_async(client, texts):
+        """
+        複数のOCRテキストが、改行やスペースの違いを除いて実質的に同じか判定する。
+        """
+        # 空でないテキストのみ抽出
+        valid_texts = [t for t in texts if t and "テキストは検出されませんでした。" not in t and "APIエラー" not in t]
+        
+        if len(valid_texts) <= 1:
+            return "比較対象なし"
+
+        # Python側で単純な正規化（全空白削除）をして一致すればAPI節約のため即OK
+        simple_normalized = {re.sub(r'\s+', '', t) for t in valid_texts}
+        if len(simple_normalized) == 1:
+            return "OK！"
+
+        prompt = f"""あなたはテキスト比較の専門家です。以下の複数のテキストリストの内容が、実質的に同じであるかを判定してください。
+
+### 判定基準
+1. **無視してよい違い（OK）**:
+    - **改行・空白**: 「改行の位置」や「スペースの有無・個数」の違いは無視してください。（例: "商品\\n名" と "商品名" は同じ）
+    - **記号の全角半角**: 意味が変わらない範囲の記号の違い（「！」と「!」など）は無視してください。
+
+2. **許容しない違い（NG）**:
+    - **文字の相違**: 一文字でも異なる文字があればNGです。
+    - **【重要】句読点（、。,.）の有無**: 読点「、」や句点「。」があるものとないものが混在している場合は、デザインミスの可能性があるため必ず「NG」としてください。
+    - **数字・単位**: これらが異なる場合はNGです。
+
+### 入力テキストリスト
+{json.dumps(valid_texts, ensure_ascii=False)}
+
+### 応答形式
+全て実質的に同じテキストであれば `ok`、明確な差分（特に句読点の有無）があれば `ng` をJSON形式で返してください。
+{{"result": "ok"}} または {{"result": "ng"}}
+"""
+        response_str = await call_openai_text_api_async(client, prompt)
+        try:
+            result_json = json.loads(response_str)
+            return "OK！" if result_json.get("result") == "ok" else "差分あり"
+        except (json.JSONDecodeError, AttributeError):
+            return "差分あり" # 解析失敗時は安全側に倒してNG
 
     def download_drive_image_sync(file_id, credentials):
         """同期的にGoogle Driveから画像データをダウンロードする"""
@@ -705,6 +747,7 @@ else: # Google認証済みの場合のみ以下を実行
 
 1. **full_text**: 画像に含まれる全てのテキストを、人間が読む順序（上から下、左から右）で抽出し、自然な改行を含めて書き起こしてください。
    - レイアウトを優先し、意味のまとまりごとに改行を入れてください。
+   - **【重要】句読点（、。,.）や記号（！?）はデザインの誤植チェックに必要です。どんなに小さくても省略せず、画像通り正確に書き起こしてください。**
    - 記号の統一（「×」→「x」など）や全角半角の統一を行ってください。
    - テキストがない場合は空文字にしてください。
 
@@ -784,8 +827,15 @@ else: # Google認証済みの場合のみ以下を実行
             # 誤字脱字チェックのタスクのみ作成（内容量抽出はVision APIで完了済み、NENGはそのまま使う）
             typo_task = check_typos_async(client, ocr_results.values()) # 全OCR結果を渡す
 
-            # 上記タスクを実行
-            typo_result = await typo_task
+            # テキスト比較タスクを追加（AIを使用）
+            text_compare_task = compare_text_content_async(client, list(ocr_results.values()))
+
+            # 上記タスクを並行実行
+            secondary_results = await asyncio.gather(
+                typo_task,
+                text_compare_task
+            )
+            typo_result, text_comparison_result = secondary_results
 
             # NENG内容量はそのまま使用（抽出なし）
             processed_neng_content = raw_neng_content
@@ -796,21 +846,9 @@ else: # Google認証済みの場合のみ以下を実行
             
             comparison_result = await compare_content_volume_async(client, cleaned_neng_content, portal_volumes)
 
-            # ポータル間のOCRテキスト比較
-            ocr_texts = [text for text in ocr_results.values() if text and "テキストは検出されませんでした。" not in text and "APIエラー" not in text]
-            text_comparison_result = ""
-            if len(ocr_texts) <= 1:
-                text_comparison_result = "比較対象なし"
-            else:
-                # 空白(連続含む)を単一スペースに正規化し、前後の空白を除去した上で比較
-                normalized_texts = {re.sub(r'\s+', ' ', text).strip() for text in ocr_texts}
-                if len(normalized_texts) == 1: # ユニークなテキストが1種類ならOK
-                    text_comparison_result = "OK！"
-                else:
-                    text_comparison_result = "差分あり"
+            # [削除] 以前のPythonによる厳密比較ロジックは削除し、AIの結果(text_comparison_result)をそのまま使用
 
             return image_name, ocr_results, volume_results, image_bytes_data, typo_result, processed_neng_content, comparison_result, text_comparison_result
-
 
     async def main_async_runner(image_groups, selected_product_code, credentials, client, progress_bar, total_records, neng_content_map):
         semaphore = asyncio.Semaphore(25)
