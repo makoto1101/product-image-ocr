@@ -18,9 +18,7 @@ import os
 
 # --- ローカルモジュールのインポート ---
 from neng_api import get_neng_content
-# [削除] create_excel_output のインポートを削除
 from export import save_to_spreadsheet
-# [追加] 操作マニュアルのインポート
 from manual import show_instructions
 
 
@@ -151,7 +149,7 @@ else: # Google認証済みの場合のみ以下を実行
     # [削除] ocr_excel_output を削除
     if 'ocr_excel_df' not in st.session_state: # スプレッドシート保存用の元DF
         st.session_state.ocr_excel_df = None
-    if 'ocr_image_bytes' not in st.session_state: # [追加] 画像バイナリデータ
+    if 'ocr_image_bytes' not in st.session_state: # 画像バイナリデータ
         st.session_state.ocr_image_bytes = None
     if 'show_ocr_confirmation' not in st.session_state:
         st.session_state.show_ocr_confirmation = False
@@ -259,7 +257,7 @@ else: # Google認証済みの場合のみ以下を実行
         st.session_state.ocr_plain_df = None
         # [削除] ocr_excel_output のクリアを削除
         st.session_state.ocr_excel_df = None 
-        st.session_state.ocr_image_bytes = None # [追加]
+        st.session_state.ocr_image_bytes = None
         st.session_state.current_page = 1
 
         if st.session_state.pending_change:
@@ -314,7 +312,7 @@ else: # Google認証済みの場合のみ以下を実行
         st.session_state.ocr_plain_df = None
         # [削除] ocr_excel_output のクリアを削除
         st.session_state.ocr_excel_df = None 
-        st.session_state.ocr_image_bytes = None # [追加]
+        st.session_state.ocr_image_bytes = None
         st.session_state.old_municipality = None
         st.session_state.old_business_code = None
         st.session_state.old_product_code = None
@@ -456,7 +454,7 @@ else: # Google認証済みの場合のみ以下を実行
         match = re.search(r'folders/([a-zA-Z0-9_-]+)', url)
         return match.group(1) if match else None
     
-    # --- [追加] スプレッドシートURLからIDを抽出する関数 ---
+    # --- スプレッドシートURLからIDを抽出する関数 ---
     def get_spreadsheet_id_from_url(url):
         # /d/ の後から、次の / までを抽出
         match = re.search(r'/d/([a-zA-Z0-9_-]+)', url)
@@ -586,9 +584,16 @@ else: # Google認証済みの場合のみ以下を実行
     async def call_openai_vision_api_async(client, prompt, image_base64, mime_type, model="gpt-4o", max_tokens=1000):
         try:
             messages = [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}}]}]
-            response = await client.chat.completions.create(model=model, messages=messages, temperature=0.0, max_tokens=max_tokens)
+            # JSONモードを有効化
+            response = await client.chat.completions.create(
+                model=model, 
+                messages=messages, 
+                temperature=0.0, 
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"}
+            )
             return response.choices[0].message.content
-        except Exception as e: return f"OpenAI APIエラー: {e}"
+        except Exception as e: return f'{{"error": "OpenAI APIエラー: {e}"}}'
 
     async def call_openai_text_api_async(client, prompt, model="gpt-4o"):
         try:
@@ -627,39 +632,12 @@ else: # Google認証済みの場合のみ以下を実行
             else: return "不明" # APIが予期しない形式で返した場合
         except (json.JSONDecodeError, AttributeError): return "解析不能" # JSON解析失敗など
 
-    async def extract_content_volume_async(client, portal_name, text):
-        # OCR結果がない、またはエラー文字列の場合は空を返す
-        if not text or "テキストは検出されませんでした。" in text or "APIエラー" in text:
-            return portal_name, ""
-        prompt = f"""あなたは、テキストから商品の「数量」や「重量」に関する部分のみを正確に抜き出す専門家です。
-以下のルールに従って、与えられたテキストから内容量を示す数値と単位の部分だけを抽出してください。
-
-### ルール
-1. **抽出対象:** 「〇個」「〇ml×〇個」「〇kg」「〇~〇本」のような、**数量、重さ、個数を示す部分のみ**を抽出します。
-2. **商品名は除外:** 「いちごソルベ」「安納芋」といった商品名は絶対に含めないでください。
-3. **完全な維持:** 抽出するテキストは、元のテキストに含まれる文字、数字、記号、改行(\\n)を完全に維持してください。一文字も変更、追加、削除してはいけません。
-4. **除外対象:** 「お届け内容」「セット内容」といった見出しや、商品の特徴・産地などの説明的な文章は抽出しないでください。
-5. **出力形式:** 抽出したテキストだけを返してください。余計な説明や前置きは一切含めないでください。
-6. **該当なしの場合:** 内容量に関する記述が見つからない場合は、必ず**空の文字列**を返してください。
-
-### 例
-- 元テキスト: "お届け内容\\nいちごソルベ\\n90ml×6個"
-- 抽出結果: "90ml×6個"
----
-元テキスト:
-"{text}"
-"""
-        response = await call_openai_simple_text_api_async(client, prompt)
-        # レスポンスの前後の空白を除去し、エスケープされた改行を実際の改行に置換
-        processed_response = response.strip().replace('\\n', '\n')
-        return portal_name, processed_response
-
     async def compare_content_volume_async(client, base_content, portal_contents):
-        """AIを使用して、基準となる内容量と複数の比較対象内容量が一致するか判定する"""
+        """AIを使用して、基準となる内容量と複数の比較対象内容量が一致するか判定する（緩やかな判定）"""
         # 空でない有効な内容量テキストのみを抽出
         valid_portal_contents = [c for c in portal_contents if c and c.strip()]
 
-        # 比較対象となるポータルの内容量が一つもなければ「記載なし」
+        # 比較対象となるポータルの内容量が一つもなければ「内容量記載なし」
         if not valid_portal_contents:
             return "内容量記載なし"
 
@@ -667,33 +645,31 @@ else: # Google認証済みの場合のみ以下を実行
         if not base_content:
             return "要確認"
 
-        prompt = f"""あなたは、商品の内容量テキストを解釈し、意味が同じかどうかを判定する専門家AIです。
-あなたのタスクは、以下の思考プロセスに従って、「基準テキスト」と「比較テキストリスト」の内容が実質的に同じか判断することです。
-### 思考プロセス
-1.  **要素の抽出**: まず、各テキストから内容量を構成する「数値」と「単位」のペアを全て抽出します。（例：「90ml×6個」からは「90ml」と「6個」の2つの要素を抽出）
-2.  **構造化**: 抽出した各要素を、標準的なJSONオブジェクトに変換します。数値が範囲（例：4～6本）の場合は `"range": "4-6"` のように表現します。
-3.  **正規化**: 変換したJSONオブジェクトの配列を、unit（単位）のアルファベット順で並べ替えます。これにより、「2kg 4~6本」と「4~6本 2kg」が同じJSON表現になります。
-4.  **比較**: 「基準テキスト」から生成した正規化JSONと、「比較テキストリスト」の各テキストから生成した正規化JSONが、全て完全に一致するかどうかを比較します。
-5.  **最終判断**: 全ての比較テキストの正規化JSONが、基準テキストの正規化JSONと一致した場合のみ `{{"result": "ok"}}` とします。一つでも不一致があれば `{{"result": "ng"}}` とします。
-### 絶対的なルール
-* **計算の禁止**: テキストに表記されている数値をそのまま使ってください。**絶対に計算してはいけません。** 「1.2kg」と「600g×2」は、表記が異なるため「不一致」です。
-* **記号の統一**: 範囲を示す記号（`~`, `～`, `-`）は、全て半角ハイフン `-` に統一して `range` を作ります。
-### 例
--   **入力**:
-    * 基準テキスト: "2kg(4～6本)"
-    * 比較テキストリスト: ["2kg\\n4-6本"]
--   **あなたの応答**: `{{"result": "ok"}}`
----
--   **入力**:
-    * 基準テキスト: "合計1.2kg"
-    * 比較テキストリスト: ["600g×2パック"]
--   **あなたの応答**: `{{"result": "ng"}}`
----
-それでは、以下のテキストを比較してください。
-### 基準テキスト
-{base_content}
-### 比較テキストリスト
-{json.dumps(valid_portal_contents, ensure_ascii=False)}
+        prompt = f"""あなたは商品の内容量テキストが、実質的に同じ意味であるかを判断するチェック担当者（人間）です。
+以下の基準に従って、柔軟に判定を行ってください。
+
+### 判定基準（緩やかな一致）
+1. **実質的な意味の一致**: 表記が異なっていても、人間が見て「同じ量」だと判断できる場合は「OK」としてください。
+    - 例: "90ml×6個" と "90mlX6" -> **OK** (×とXの違い、単位の省略は許容)
+    - 例: "2kg" と "2.0kg" -> **OK** (有効数字の違いは許容)
+    - 例: "合計1kg (500g×2)" と "1kg" -> **OK**
+2. **表記揺れの無視**:
+    - 大文字・小文字の違い (ml, ML, mL) -> **無視**
+    - 全角・半角の違い -> **無視**
+    - スペースの有無 -> **無視**
+    - 順序の違い ("2kg 5本" と "5本 2kg") -> **無視**
+3. **明らかに違う場合のみNG**:
+    - 数量や単位が明らかに異なる場合（例: "1kg" と "2kg"）は「NG」としてください。
+
+### 入力データ
+- **基準データ (NENG)**: "{base_content}"
+- **比較対象データ (画像から抽出)**: {json.dumps(valid_portal_contents, ensure_ascii=False)}
+
+### 応答形式
+全ての比較対象データが、基準データと実質的に一致している（または矛盾していない）と判断できる場合は `ok`、
+明らかに矛盾しているデータが含まれる場合は `ng` を、JSON形式で返してください。
+
+{{"result": "ok"}} または {{"result": "ng"}}
 """
         response_str = await call_openai_text_api_async(client, prompt)
         try:
@@ -710,7 +686,7 @@ else: # Google認証済みの場合のみ以下を実行
         return request.execute() # 画像のバイナリデータを返す
 
     async def extract_text_from_drive_image_async(portal_name, file_id, mime_type, credentials, client):
-        """非同期でDrive画像を取得し、OpenAI Vision APIでOCRを実行"""
+        """非同期でDrive画像を取得し、OpenAI Vision APIでOCRと内容量抽出を同時に実行"""
         image_bytes = None # 初期化
         try:
             loop = asyncio.get_running_loop()
@@ -719,48 +695,60 @@ else: # Google認証済みの場合のみ以下を実行
             # Base64エンコード
             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
         except HttpError as e:
-            return portal_name, f"Google Drive画像取得失敗 (HttpError {e.resp.status})", None
+            return portal_name, f"Google Drive画像取得失敗 (HttpError {e.resp.status})", "", None
         except Exception as e:
-            return portal_name, f"Google Drive画像取得失敗: {e}", None # その他のエラー
+            return portal_name, f"Google Drive画像取得失敗: {e}", "", None # その他のエラー
 
         # --- プロンプト ---
-        prompt = """あなたは、商品広告画像のテキストを人間が読む通りに正確に書き起こす専門家です。
-あなたのタスク:
-渡された画像の中から全てのテキストを読み取り、人間が目で追う自然な順序（上から下、左から右）に並べ替えてください。そして、単語や意味のまとまり（フレーズ）ごとに改行を入れて出力してください。
-書き起こしと改行のルール:
-1. 読む順序は厳密に「上から下へ、左から右へ」です。画像のレイアウトを最優先してください。
-2. デザイン上の理由で分離している文字（例：「ギ」と「ュ」と「っと」）は、意味が通じるように自然な1つの単語（例：「ギュっと」）として結合してください。
-3. 結合した後の単語やフレーズは、それぞれ独立した行になるように改行(\\n)を挿入してください。
-文字の正規化ルール:
-1. 記号の統一: 「×」(掛ける記号)や「X」(大文字のエックス)は、すべて「x」(半角小文字のエックス)に統一してください。
-2. 全角・半角の統一: 全角の英数字は、すべて対応する半角の文字に統一してください。(例: 「Ａ」→「A」、「３」→「3」)
-絶対的なルール:
-1. 画像の視覚的なレイアウトが絶対的な正解です。
-2. 画像に含まれる全ての文字・数字・記号は、一切省略せず、推測して文字を追加することも絶対にしないでください。
-3. 元のテキストに含まれる文字の種類（ひらがな、カタカナなど「っ」と「ッ」）や大きさ（例: 「っ」と「つ」）は、絶対に変更しないでください。
-4. **応答形式:** 抽出したテキスト**のみ**を返してください。「画像内のテキストは以下の通りです」といった前置きや説明、マークダウン(` ``` `)は一切含めないでください。
-5. **テキストなしの場合:** 画像にテキストが一切含まれていないと判断した場合のみ、**空の文字列**を返してください。
+        prompt = """あなたは、商品広告画像のテキスト抽出の専門家です。
+与えられた画像から、以下の2つの情報をJSON形式で抽出してください。
+
+1. **full_text**: 画像に含まれる全てのテキストを、人間が読む順序（上から下、左から右）で抽出し、自然な改行を含めて書き起こしてください。
+   - レイアウトを優先し、意味のまとまりごとに改行を入れてください。
+   - 記号の統一（「×」→「x」など）や全角半角の統一を行ってください。
+   - テキストがない場合は空文字にしてください。
+
+2. **volume_text**: 画像の中から、「商品の内容量」「重量」「個数」に関連する記述のみを抽出してください。
+   - 例: "90ml×6個", "約2kg", "500g 2パック" など。
+   - 商品名や説明文は含めず、量を示す部分だけを抜き出してください。
+   - 該当する記述がない場合は空文字にしてください。
+
+### 出力形式 (JSON)
+{
+  "full_text": "抽出した全文...",
+  "volume_text": "抽出した内容量..."
+}
 """
 
-        # OpenAI Vision API呼び出し
+        # OpenAI Vision API呼び出し (JSONモード)
         response_text = await call_openai_vision_api_async(client, prompt, image_base64, mime_type)
 
-        # --- 後処理 (簡素化) ---
-        if "OpenAI APIエラー" in response_text:
-             return portal_name, response_text, image_bytes # エラーメッセージをそのまま返す
+        final_full_text = ""
+        final_volume_text = ""
 
-        # プロンプトが無視されてマークダウンが返ってきた場合に備える
-        cleaned_text = re.sub(r"```(json|text|plaintext)?\n?", "", response_text).replace("```", "")
-        
-        # 各行の前後の空白を除去し、空行を除外して改行で結合
-        result_lines = [line.strip() for line in cleaned_text.strip().split('\n')]
-        final_text = '\n'.join([line for line in result_lines if line])
+        # --- JSON解析と後処理 ---
+        try:
+            json_data = json.loads(response_text)
+            
+            # errorキーがある場合はAPIエラーとして処理
+            if "error" in json_data:
+                return portal_name, json_data["error"], "", image_bytes
 
-        # --- AIが空文字列の代わりに '""' という文字列を返した場合の対策 ---
-        if final_text == '""':
-            final_text = "" # 本当の空文字列に変換する
+            final_full_text = json_data.get("full_text", "").strip()
+            final_volume_text = json_data.get("volume_text", "").strip()
+            
+            # AIが空文字列の代わりに '""' という文字列を返した場合の対策
+            if final_full_text == '""': final_full_text = ""
+            if final_volume_text == '""': final_volume_text = ""
 
-        return portal_name, final_text, image_bytes
+        except json.JSONDecodeError:
+            # JSON解析に失敗した場合のフォールバック (従来のテキストとして扱う)
+            # マークダウン記法などを除去して全文として扱う
+            cleaned_text = re.sub(r"```(json|text|plaintext)?\n?", "", response_text).replace("```", "")
+            final_full_text = cleaned_text.strip()
+            final_volume_text = "" # 解析不能なため空にする
+
+        return portal_name, final_full_text, final_volume_text, image_bytes
 
     # --- メインの非同期処理ワーカー ---
     async def process_single_record_async(image_name, data, selected_product_code, credentials, client, semaphore, neng_content_map):
@@ -786,32 +774,26 @@ else: # Google認証済みの場合のみ以下を実行
             ocr_task_results = await asyncio.gather(*ocr_tasks) # OCRタスクのみ実行
 
             # OCR結果と画像データを辞書に整理
-            ocr_results, image_bytes_data = {}, {}
-            for p_name, extracted_text, img_bytes in ocr_task_results:
+            ocr_results, volume_results, image_bytes_data = {}, {}, {}
+            
+            for p_name, extracted_text, volume_text, img_bytes in ocr_task_results:
                 ocr_results[p_name] = extracted_text
+                volume_results[p_name] = volume_text # 画像から直接抽出した内容量
                 if img_bytes: image_bytes_data[p_name] = img_bytes # 画像データも保持
 
-            # 内容量抽出、NENG内容量抽出、誤字脱字チェックのタスクを作成
-            volume_tasks = [extract_content_volume_async(client, p_name, text)
-                            for p_name, text in ocr_results.items()]
-            neng_volume_task = extract_content_volume_async(client, "NENG_DUMMY", raw_neng_content) # NENG用
+            # 誤字脱字チェックのタスクのみ作成（内容量抽出はVision APIで完了済み、NENGはそのまま使う）
             typo_task = check_typos_async(client, ocr_results.values()) # 全OCR結果を渡す
 
-            # 上記タスクを並行実行
-            secondary_results = await asyncio.gather(
-                asyncio.gather(*volume_tasks), # 内容量抽出タスク群
-                neng_volume_task,
-                typo_task
-            )
-            volume_task_results, neng_volume_tuple, typo_result = secondary_results
+            # 上記タスクを実行
+            typo_result = await typo_task
 
-            # 結果を整理
-            volume_results = {p_name: vol for p_name, vol in volume_task_results}
-            _, processed_neng_content = neng_volume_tuple # NENG内容量を取得
+            # NENG内容量はそのまま使用（抽出なし）
+            processed_neng_content = raw_neng_content
 
             # NENG内容量とポータル内容量を比較するタスクを実行
             cleaned_neng_content = processed_neng_content.strip().strip('"') if processed_neng_content else ""
             portal_volumes = [v.strip().strip('"') if v else "" for v in volume_results.values()]
+            
             comparison_result = await compare_content_volume_async(client, cleaned_neng_content, portal_volumes)
 
             # ポータル間のOCRテキスト比較
@@ -881,7 +863,6 @@ else: # Google認証済みの場合のみ以下を実行
 
         if not image_groups:
             st.warning("処理対象の画像が見つかりませんでした。")
-            # [修正] 戻り値を4つに変更
             return None, None, None, None
 
         print(unique_product_codes_to_fetch)
@@ -1323,7 +1304,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         df_display_source = st.session_state.ocr_result_df 
         total_count = len(df_display_source)
 
-        # --- [移動・変更] スプレッドシート保存エリア (開閉式) ---
+        # --- スプレッドシート保存エリア (開閉式) ---
         
         # 保存ボタン表示条件
         show_gspread_button = 'ocr_excel_df' in st.session_state and \
@@ -1431,17 +1412,17 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         # --- フィルターUI ---
         filter_col, view_col = st.columns(2)
         with view_col:
-            # --- [変更] UI部分 ---
+            # --- UI部分 ---
             with st.container(border=True):
                 st.markdown("##### 表示列の設定")
                 # カラムを3つにする
                 cc1, cc2, cc3 = st.columns(3)
                 
                 with cc1:
-                    # [追加] テキスト比較のチェックボックス
+                    # テキスト比較のチェックボックス
                     show_text_compare = st.checkbox("テキスト比較", value=True, help="テキスト比較列を表示")
                 with cc2:
-                    # [変更] ヘルプテキストから「テキスト比較」を削除
+                    # ヘルプテキストから「テキスト比較」を削除
                     show_ocr_cols = st.checkbox("誤字脱字", value=True, help="OCR/誤字脱字列を表示")
                 with cc3:
                     show_content_cols = st.checkbox("内容量", value=True, help="内容量/NENG/内容量比較列を表示")
@@ -1473,7 +1454,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
         # --- テーブル表示 ---
-        # --- [変更] テーブル表示用ハイライト関数 ---
+        # --- テーブル表示用ハイライト関数 ---
         # 引数に text_compare_visible を追加
         def highlight_row(row, ocr_visible, content_visible, text_compare_visible):
             style = ''
@@ -1482,12 +1463,12 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
             if "エラー検出" in row and "失敗あり" in str(row["エラー検出"]):
                 has_visible_error = True
 
-            # [追加] テキスト比較が表示されている場合のみチェック
+            # テキスト比較が表示されている場合のみチェック
             if text_compare_visible and not has_visible_error:
                 if "テキスト比較" in row and "差分あり" in str(row["テキスト比較"]):
                     has_visible_error = True
 
-            # [変更] ocr_visible のブロックからテキスト比較の判定を削除
+            # ocr_visible のブロックからテキスト比較の判定を削除
             if ocr_visible and not has_visible_error:
                 # ここから「テキスト比較」の判定を削除しました
                 if "誤字脱字" in row and '<span style="color: blue;">OK！</span>' not in str(row["誤字脱字"]):
@@ -1542,12 +1523,12 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                         visible_columns.append(col)
                         continue
                     
-                    # [追加] テキスト比較の制御
+                    # テキスト比較の制御
                     if col == "テキスト比較" and show_text_compare:
                         visible_columns.append(col)
                         continue
                     
-                    # [変更] 誤字脱字のみ show_ocr_cols で制御
+                    # 誤字脱字のみ show_ocr_cols で制御
                     if col == "誤字脱字" and show_ocr_cols:
                         visible_columns.append(col)
                         continue
@@ -1570,7 +1551,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
 
                 df_visible_cols_only = df_filtered_before_status[visible_columns]
                 is_row_highlighted = df_visible_cols_only.apply(
-                    # [変更] 引数に text_compare_visible=show_text_compare を追加
+                    # 引数に text_compare_visible=show_text_compare を追加
                     lambda row: 'background-color: #ffe5e5' in highlight_row(row, show_ocr_cols, show_content_cols, show_text_compare)[0],
                     axis=1
                 )
@@ -1602,7 +1583,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 # 件数が1件以上ある場合のみ表示
                 if need_check_count > 0:
                     # 全体を少し小さく(0.8em)し、カッコは黒字、中の文字だけ赤色にする
-                    check_status_html = f"<span style='font-size: 0.8em;'>（<span style='color: red;'>要確認 {need_check_count}件</span>）</span>"
+                    check_status_html = f"<span style='font-size: 0.8em;'>（<span style='color: #ff3456;'>要確認 {need_check_count}件</span>）</span>"
                 else:
                     check_status_html = ""
 
@@ -1626,12 +1607,12 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                     final_columns_to_show.append(col)
                     continue
                 
-                # [追加] テキスト比較の独立制御
+                # テキスト比較の独立制御
                 if col == "テキスト比較" and show_text_compare:
                     final_columns_to_show.append(col)
                     continue
                 
-                # [変更] 誤字脱字のみ show_ocr_cols で制御
+                # 誤字脱字のみ show_ocr_cols で制御
                 if col == "誤字脱字" and show_ocr_cols:
                     final_columns_to_show.append(col)
                     continue
@@ -1667,9 +1648,20 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
 
             if not df_paginated.empty:
                 from functools import partial 
-                # [変更] text_compare_visible を追加
+                # text_compare_visible を追加
                 highlight_func = partial(highlight_row, ocr_visible=show_ocr_cols, content_visible=show_content_cols, text_compare_visible=show_text_compare)
                 styler = df_paginated.style.apply(highlight_func, axis=1)
+
+                cols_to_pad = []
+                # 列が存在する場合のみリストに追加
+                if "テキスト比較" in df_paginated.columns:
+                    cols_to_pad.append("テキスト比較")
+                if "内容量比較" in df_paginated.columns:
+                    cols_to_pad.append("内容量比較")
+                
+                if cols_to_pad:
+                    # 左側の余白(padding-left)を25pxに設定（通常は8px程度）
+                    styler.set_properties(subset=cols_to_pad, **{'padding-left': '10px !important'})
 
                 styler.hide(axis="index") 
 
@@ -1681,7 +1673,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 container_classes = ["table-container"]
                 
                 # 1. 画像モード判定（チェックボックスの状態）
-                # [変更] show_text_compare も条件に追加（すべてOFFの場合などレイアウト崩れ防止のため）
+                # show_text_compare も条件に追加（すべてOFFの場合などレイアウト崩れ防止のため）
                 if not (show_ocr_cols and show_content_cols and show_text_compare):
                     container_classes.append("image-mode-only")
                 
