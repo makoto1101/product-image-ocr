@@ -609,36 +609,95 @@ else: # Google認証済みの場合のみ以下を実行
             return response.choices[0].message.content
         except Exception as e: return f"OpenAI APIエラー: {e}"
 
-    async def check_typos_async(client, texts):
-        filtered_texts = [t for t in texts if t and "テキストは検出されませんでした。" not in t and "APIエラー" not in t and "予期せぬエラー" not in t]
-        if not filtered_texts: return "OK！"
-        prompt = f"""あなたは日本語の「誤字」と「脱字」を厳密に発見する校正AIです。以下の広告文テキストをチェックしてください。
-ルール:
-1. 表現、スタイル、句読点、文法に関する指摘は絶対にしないでください。
-2. 数字や広告デザインによる意図的な語順は問題ないと判断してください。
-3. **テキストは単語がスペースなしで連結されています。単語の区切りがないことで不自然に見える文字列は、誤字脱字として指摘しないでください。**
-4. 明確な誤字のみを指摘してください。
-判断:
-- 上記ルールに反する問題が一切なければ {{"status": "ok"}} を返してください。
-- 誤字脱字がある場合のみ、{{"status": "error", "message": "「(問題のある単語のみ)」を確認"}} という形式で返してください。
-- 必ずJSON形式で応答してください。
----テキスト---
-{'\n---\n'.join(filtered_texts)}"""
+    async def check_typos_async(client, ocr_results_dict):
+        """
+        誤字脱字チェックを行う。
+        ポータルごとのテキストを辞書で受け取り、誤字がある場合は対象のポータル名も特定して返す。
+        """
+        # 無効なテキストを除外して辞書を再構築
+        filtered_items = {
+            k: v for k, v in ocr_results_dict.items() 
+            if v and "テキストは検出されませんでした。" not in v and "APIエラー" not in v and "予期せぬエラー" not in v
+        }
+        
+        if not filtered_items: return "OK！"
+
+        # AIに渡すテキストを整形（【ポータル名】テキスト... の形式）
+        formatted_text = ""
+        for portal_name, text in filtered_items.items():
+            formatted_text += f"【{portal_name}】\n{text}\n---\n"
+
+        # --- プロンプト修正開始 ---
+        prompt = f"""あなたは商品広告テキストに含まれる「明らかな誤字・脱字・誤用」のみを検出する品質管理AIです。
+校正者ではありません。「修正すべき致命的なミス」以外は全て無視してください。
+
+### 重要：指摘の範囲（切り取り方）について
+単語単体で意味が通じる場合でも、文脈がおかしい場合は**「文脈（前後の助詞や動詞）を含めたフレーズ」**で指摘してください。
+- 悪い例：「保存期間」を確認 （単語自体は合っているため混乱する）
+- 良い例：「保存期間ありません」を確認 （助詞不足や言い回しの違和感が伝わる）
+
+### 除外ルール（絶対に指摘してはいけないもの）
+1. **食材名・商品名・固有名詞**:
+   - 「蓮根」「牛たん」「○○産」などの名詞は、文脈が唐突でも（例：「泥が蓮根」）商品名やキャッチコピーの可能性があるため無視してください。
+2. **広告特有の表現**:
+   - 箇条書きや短文における助詞の省略（例：「保存期間ありません」「在庫なし」）は、意味が通じる限り許容してください。
+3. **スペースによる単語連結**:
+   - OCRの仕様でスペースがないことは無視してください。
+
+### 指摘すべき対象（例）
+- **明らかな誤変換**:
+  - 「確認」→「角認」、「絶品」→「絶貧」（漢字の間違い）
+- **明らかな入力・タイプミス**:
+  - 「ありがとうございます」→「ありがとうごうざいます」（文字の重複）
+  - 「おいしい」→「おしいい」（順序逆転）
+- **文章として崩壊しているもの**:
+  - 「保存期間ありません」→広告表現としてギリギリ許容（スルー推奨だが、あまりに不自然ならフレーズで指摘）
+  - 「保存期間あありません」→明らかに「あ」が多いので、「保存期間あありません」として指摘。
+- **送り仮名の明らかな異常**:
+  - 「行います」→「行いあす」
+
+### 判断・出力フォーマット
+- 指摘すべきエラーがない場合は {{"status": "ok"}} を返してください。
+- エラーがある場合のみ、以下のJSON形式で返してください。
+  {{
+    "status": "error", 
+    "message": "\\"(問題のあるフレーズ全体)\\" を確認",
+    "affected_sources": ["ソース名1", "ソース名2", ...] 
+  }}
+  - **重要: 同じ誤字が複数のポータルに含まれている場合は、該当する全てのポータル名を `affected_sources` リストに含めてください。**
+
+---チェック対象テキスト---
+{formatted_text}"""
+        # --- プロンプト修正終了 ---
+
         response_str = await call_openai_text_api_async(client, prompt)
         try:
             result_json = json.loads(response_str)
-            if result_json.get("status") == "ok": return "OK！"
-            elif result_json.get("status") == "error": return result_json.get("message", "エラー")
-            else: return "不明" # APIが予期しない形式で返した場合
-        except (json.JSONDecodeError, AttributeError): return "解析不能" # JSON解析失敗など
+            if result_json.get("status") == "ok": 
+                return "OK！"
+            elif result_json.get("status") == "error": 
+                message = result_json.get("message", "エラー")
+                affected_sources = result_json.get("affected_sources", [])
+                
+                # 対象のポータル名がある場合、メッセージに追記する
+                if affected_sources:
+                    # JSON等の表記揺れ対策（念のため文字列化して結合）
+                    sources_str = "」「".join([str(s) for s in affected_sources])
+                    return f"{message}\n（対象：「{sources_str}」）"
+                else:
+                    return message
+            else: 
+                return "不明" # APIが予期しない形式で返した場合
+        except (json.JSONDecodeError, AttributeError): 
+            return "解析不能" # JSON解析失敗など
 
-    async def compare_content_volume_async(client, base_content, portal_contents):
+    async def compare_content_volume_async(client, base_content, volume_results_dict):
         """AIを使用して、基準となる内容量と複数の比較対象内容量が一致するか判定する（緩やかな判定）"""
-        # 空でない有効な内容量テキストのみを抽出
-        valid_portal_contents = [c for c in portal_contents if c and c.strip()]
+        # 空でない有効な内容量テキストのみを抽出した辞書を作成
+        valid_portal_items = {k: v for k, v in volume_results_dict.items() if v and v.strip()}
 
         # 比較対象となるポータルの内容量が一つもなければ「内容量記載なし」
-        if not valid_portal_contents:
+        if not valid_portal_items:
             return "内容量記載なし"
 
         # NENGの内容量（基準）が空なら「要確認」
@@ -663,18 +722,33 @@ else: # Google認証済みの場合のみ以下を実行
 
 ### 入力データ
 - **基準データ (NENG)**: "{base_content}"
-- **比較対象データ (画像から抽出)**: {json.dumps(valid_portal_contents, ensure_ascii=False)}
+- **比較対象データ**: {json.dumps(valid_portal_items, ensure_ascii=False)}
 
 ### 応答形式
-全ての比較対象データが、基準データと実質的に一致している（または矛盾していない）と判断できる場合は `ok`、
-明らかに矛盾しているデータが含まれる場合は `ng` を、JSON形式で返してください。
+全ての比較対象データが、基準データと実質的に一致している（または矛盾していない）と判断できる場合は `ok` を返してください。
+明らかに矛盾しているデータが含まれる場合は `ng` とし、**矛盾しているデータのキー名（ポータル名）のリスト**をJSON形式で返してください。
 
-{{"result": "ok"}} または {{"result": "ng"}}
+成功時:
+{{"result": "ok"}}
+
+失敗時（NGの場合）:
+{{"result": "ng", "deviant_sources": ["Portal A", "Portal B"]}}
 """
         response_str = await call_openai_text_api_async(client, prompt)
         try:
             result_json = json.loads(response_str)
-            return "OK！" if result_json.get("result") == "ok" else "要確認"
+            if result_json.get("result") == "ok":
+                return "OK！"
+            else:
+                # NGの場合
+                deviant_sources = result_json.get("deviant_sources", [])
+                base_msg = "要確認"
+                if deviant_sources:
+                    sources_str = "」「".join([str(s) for s in deviant_sources])
+                    return f"{base_msg}\n（対象：「{sources_str}」）"
+                else:
+                    return base_msg
+                    
         except (json.JSONDecodeError, AttributeError):
             return "要確認" # JSON解析失敗や result キーがない場合は「要確認」扱い
         
@@ -825,7 +899,7 @@ else: # Google認証済みの場合のみ以下を実行
                 if img_bytes: image_bytes_data[p_name] = img_bytes # 画像データも保持
 
             # 誤字脱字チェックのタスクのみ作成（内容量抽出はVision APIで完了済み、NENGはそのまま使う）
-            typo_task = check_typos_async(client, ocr_results.values()) # 全OCR結果を渡す
+            typo_task = check_typos_async(client, ocr_results) 
 
             # テキスト比較タスクを追加（AIを使用）
             text_compare_task = compare_text_content_async(client, list(ocr_results.values()))
@@ -842,9 +916,10 @@ else: # Google認証済みの場合のみ以下を実行
 
             # NENG内容量とポータル内容量を比較するタスクを実行
             cleaned_neng_content = processed_neng_content.strip().strip('"') if processed_neng_content else ""
-            portal_volumes = [v.strip().strip('"') if v else "" for v in volume_results.values()]
             
-            comparison_result = await compare_content_volume_async(client, cleaned_neng_content, portal_volumes)
+            # volume_results の値リストではなく、辞書そのものと、クリーニング済み辞書を作成して渡す手もあるが、
+            # AI側でJSONとして受け取るため、volume_results（辞書）をそのまま渡す
+            comparison_result = await compare_content_volume_async(client, cleaned_neng_content, volume_results)
 
             # [削除] 以前のPythonによる厳密比較ロジックは削除し、AIの結果(text_comparison_result)をそのまま使用
 
@@ -1044,14 +1119,16 @@ else: # Google認証済みの場合のみ以下を実行
                 row_data_display["誤字脱字"] = f'<span style="color: red;">{display_typo_text}</span>'
             row_data_excel["誤字脱字"] = final_typo_result
 
+            display_comparison_text = comparison_result.replace('\n', '<br>')
+
             if comparison_result == "OK！":
-                row_data_display["内容量比較"] = f'<span style="color: blue;">{comparison_result}</span>'
-            elif comparison_result == "要確認":
-                row_data_display["内容量比較"] = f'<span style="color: red;">{comparison_result}</span>'
+                row_data_display["内容量比較"] = f'<span style="color: blue;">{display_comparison_text}</span>'
+            elif "要確認" in comparison_result: # 部分一致に変更
+                row_data_display["内容量比較"] = f'<span style="color: red;">{display_comparison_text}</span>'
             elif comparison_result == "内容量記載なし":
-                row_data_display["内容量比較"] = f'<span style="color: gray;">{comparison_result}</span>'
+                row_data_display["内容量比較"] = f'<span style="color: gray;">{display_comparison_text}</span>'
             else:
-                row_data_display["内容量比較"] = comparison_result
+                row_data_display["内容量比較"] = display_comparison_text
             row_data_excel["内容量比較"] = comparison_result
 
             if error_detection_message:
