@@ -11,6 +11,10 @@ def show_instructions():
         st.markdown("""
         <span style="color: #4e4e4e; font-size: 15px;">OCR（Optical Character Recognition/Reader）とは、画像に含まれる文字を認識し、テキストデータに変換する技術のことです。本アプリではこの技術を活用し、Google Driveに保存された商品画像をAIで解析することで、テキストの抽出から誤字脱字のチェック、NENGの内容量情報との比較までを自動で行います。</span>
 
+        ---
+
+        ## 📂 1. Google Drive 設定
+                    
         ### ① マイドライブに画像フォルダを準備
         対象の画像フォルダをご自身の「**マイドライブ**」に用意（コピー）してください。共有ドライブからマイドライブへのコピーは[こちら](https://script.google.com/a/macros/steamship.co.jp/s/AKfycbxfHwqxcl-tAnUOsx8OT9lHa2c4DV13VivUMt6CFC6dtDRweQOI53RT5mAP-5VVB5KF/exec)をご利用ください。
 
