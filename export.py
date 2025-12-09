@@ -104,7 +104,36 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
     Sheets API v4のBatchUpdateを使用して書式設定を行う。
     """
     
-    requests = [] 
+    requests = []
+
+    # 1. 1行目を固定する設定
+    requests.append({
+        "updateSheetProperties": {
+            "properties": {
+                "sheetId": sheet_id,
+                "gridProperties": {
+                    "frozenRowCount": 1
+                }
+            },
+            "fields": "gridProperties.frozenRowCount"
+        }
+    })
+
+    # 2. フィルターを作成する設定
+    requests.append({
+        "setBasicFilter": {
+            "filter": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": 0,
+                    "endRowIndex": len(df) + 1, # ヘッダー(1行) + データ行数
+                    "startColumnIndex": 0,
+                    "endColumnIndex": len(df.columns)
+                }
+            }
+        }
+    })
+    
     all_portal_names = sorted(list(portal_files.keys())) if portal_files else []
     
     # --- 1. 列幅設定 ---

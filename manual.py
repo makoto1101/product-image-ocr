@@ -7,7 +7,7 @@ def show_instructions():
     # --- スクロールエリアの定義 ---
     # height=500 (ピクセル) に設定することで、中身がこれを超えるとスクロールバーが出ます
     # border=True で枠線を付けて、エリアを分かりやすくしています
-    with st.container(height=600, border=True):
+    with st.container(height=700, border=True):
         st.markdown("""
         <span style="color: #4e4e4e; font-size: 15px;">OCR（Optical Character Recognition/Reader）とは、画像に含まれる文字を認識し、テキストデータに変換する技術のことです。本アプリではこの技術を活用し、Google Driveに保存された商品画像をAIで解析することで、テキストの抽出から誤字脱字のチェック、NENGの内容量情報との比較までを自動で行います。</span>
 
@@ -102,7 +102,7 @@ def show_instructions():
         ## 💾 5. スプレッドシートに保存（※必要に応じて）
 
         ### ① マイドライブへのコピーと共有設定
-        [こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc/edit)をマイドライブにコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。
+        [こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)をマイドライブにコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。
         
         このスプレッドシートには、画像をセルに埋め込むためのスクリプトが事前に組み込まれています。
 
