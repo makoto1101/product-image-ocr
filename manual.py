@@ -102,7 +102,7 @@ def show_instructions():
         ## 💾 5. スプレッドシートに保存（※必要に応じて）
 
         ### ① マイドライブへのコピーと共有設定
-        [こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)をマイドライブにコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。
+        [こちらのスプレッドシート](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)をマイドライブにコピー または、SSのテンプレートギャラリーをクリックして、コピーしたスプレッドシートにサイドメニューのサービスアカウントを「**編集者**」権限で共有してください。
         
         このスプレッドシートには、画像をセルに埋め込むためのスクリプトが事前に組み込まれています。
 

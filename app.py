@@ -1496,7 +1496,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         if show_gspread_button:
             # 入力フォームとボタンは Expander の中
             with st.expander("スプレッドシートに保存", expanded=False):
-                st.info(f"[**こちらのスプレッドシート**](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)を**マイドライブ**にコピーして、サイドメニューのサービスアカウントを「**編集者**」権限で共有してください。コピーしたスプレッドシートのURLを以下に入力して「保存」ボタンを押下してください。")
+                st.info(f"[**こちらのスプレッドシート**](https://docs.google.com/spreadsheets/d/1Hi4TYK16lsezrp2Hnv6ICQQzLPcb_xhkneOEzXMk9Rc)を**マイドライブ**にコピー または、**SSのテンプレートギャラリー**をクリックして、コピーしたスプレッドシートにサイドメニューのサービスアカウントを「**編集者**」権限で共有してください。最後にコピーしたスプレッドシートのURLを以下に入力して「保存」ボタンを押下してください。")
                 
                 st.text_input(
                     "GoogleスプレッドシートURL", 
