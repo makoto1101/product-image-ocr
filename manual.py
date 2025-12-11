@@ -5,7 +5,6 @@ import streamlit as st
 @st.dialog("操作マニュアル", width="large")
 def show_instructions():    
     # --- スクロールエリアの定義 ---
-    # height=500 (ピクセル) に設定することで、中身がこれを超えるとスクロールバーが出ます
     # border=True で枠線を付けて、エリアを分かりやすくしています
     with st.container(height=700, border=True):
         st.markdown("""

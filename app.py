@@ -146,7 +146,6 @@ else: # Google認証済みの場合のみ以下を実行
         st.session_state.ocr_result_df = None
     if 'ocr_plain_df' not in st.session_state: # 検索用の平文DF
         st.session_state.ocr_plain_df = None
-    # [削除] ocr_excel_output を削除
     if 'ocr_excel_df' not in st.session_state: # スプレッドシート保存用の元DF
         st.session_state.ocr_excel_df = None
     if 'ocr_image_bytes' not in st.session_state: # 画像バイナリデータ
@@ -310,7 +309,6 @@ else: # Google認証済みの場合のみ以下を実行
         # ドライブ読み込み時は結果と選択状態をリセット
         st.session_state.ocr_result_df = None
         st.session_state.ocr_plain_df = None
-        # [削除] ocr_excel_output のクリアを削除
         st.session_state.ocr_excel_df = None 
         st.session_state.ocr_image_bytes = None
         st.session_state.old_municipality = None

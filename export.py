@@ -1,24 +1,16 @@
 import streamlit as st
 import pandas as pd
-# [削除] io, tempfile, os を削除 (Excel生成にのみ使用されていたため)
 import copy
 import re 
-# [削除] pandas.io.formats.excel を削除
 
-# --- Google / Excel 関連 ---
+# --- Google関連 ---
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import gspread
 import gspread_dataframe as gd
-# [削除] pandas.io.formats.excel のインポートは export.py の先頭で行う
 
 # --- サービスアカウントのインポート ---
 from google.oauth2 import service_account
-
-
-# === Excel出力 (export.py) ===
-
-# [削除] create_excel_output 関数全体を削除
 
 
 # === スプレッドシート出力 (export.py) ===
@@ -270,10 +262,10 @@ def format_worksheet_gspread(sheets_service, spreadsheet_id, sheet_id, df, porta
                     current_cell_format.update(fmt_text_red)
             
             elif '（画像）' in col_name:
-                # [修正] 画像列はURL文字列が入るので、中央揃えではなくデフォルト(左上)のままにする
+                # 画像列はURL文字列が入るので、中央揃えではなくデフォルト(左上)のままにする
                 # current_cell_format.update(IMAGE_CELL_FORMAT_GS)
                 
-                # [追加] URLに下線と青色を付ける（ExcelのURL書式と同様）
+                # URLに下線と青色を付ける（ExcelのURL書式と同様）
                 current_cell_format.update({"textFormat": {"foregroundColor": COLOR_BLUE_GS, "underline": True}})
             
             cell_format_requests.append(
@@ -350,9 +342,7 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
                 worksheet.resize(rows=len(df_excel) + 1, cols=len(df_excel.columns))
             except gspread.exceptions.WorksheetNotFound:
                 # 存在しなければ作成
-                # --- 修正 ---
                 worksheet = sh.add_worksheet(title=worksheet_title, rows=len(df_excel) + 1, cols=len(df_excel.columns))
-                # --- 修正 ---
             except Exception as e:
                 raise Exception(f"シート「{worksheet_title}」の準備中にエラーが発生しました: {e}")
 
@@ -360,7 +350,6 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
             # --- データ書き込み準備 ---
             df_excel_gspread = df_excel.fillna('').copy()
             
-            # --- [ここから修正] ---
             # （画像）列のURL文字列を =HYPERLINK() 数式に変換
             
             for col_name in df_excel_gspread.columns:
@@ -374,7 +363,6 @@ def save_to_spreadsheet(df_excel, spreadsheet_id, sheet_name, creds_info, portal
                         return "" # URLでない場合は空
 
                     df_excel_gspread[col_name] = df_excel_gspread[col_name].apply(create_hyperlink_formula)
-            # --- [修正ここまで] ---
 
             headers = df_excel_gspread.columns.values.tolist()
             data_values = df_excel_gspread.values.tolist()
