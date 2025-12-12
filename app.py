@@ -20,6 +20,7 @@ import os
 from neng_api import get_neng_content
 from export import save_to_spreadsheet
 from manual import show_instructions
+from log import log_ocr_execution
 
 
 # --- Streamlit ページ設定 ---
@@ -590,22 +591,28 @@ else: # Google認証済みの場合のみ以下を実行
                 max_tokens=max_tokens,
                 response_format={"type": "json_object"}
             )
-            return response.choices[0].message.content
-        except Exception as e: return f'{{"error": "OpenAI APIエラー: {e}"}}'
+            # コンテンツと、入力/出力トークンを返す
+            return response.choices[0].message.content, response.usage.prompt_tokens, response.usage.completion_tokens
+        except Exception as e: 
+            return f'{{"error": "OpenAI APIエラー: {e}"}}', 0, 0
 
     async def call_openai_text_api_async(client, prompt, model="gpt-4o"):
         try:
             messages = [{"role": "user", "content": prompt}]
             response = await client.chat.completions.create(model=model, messages=messages, temperature=0.0, response_format={"type": "json_object"})
-            return response.choices[0].message.content
-        except Exception as e: return f'{{"status": "api_error", "message": "OpenAI APIエラー: {e}"}}'
+            # コンテンツと、入力/出力トークンを返す
+            return response.choices[0].message.content, response.usage.prompt_tokens, response.usage.completion_tokens
+        except Exception as e: 
+            return f'{{"status": "api_error", "message": "OpenAI APIエラー: {e}"}}', 0, 0
 
     async def call_openai_simple_text_api_async(client, prompt, model="gpt-4o"):
         try:
             messages = [{"role": "user", "content": prompt}]
             response = await client.chat.completions.create(model=model, messages=messages, temperature=0.0)
-            return response.choices[0].message.content
-        except Exception as e: return f"OpenAI APIエラー: {e}"
+            # コンテンツと、入力/出力トークンを返す
+            return response.choices[0].message.content, response.usage.prompt_tokens, response.usage.completion_tokens
+        except Exception as e: 
+            return f"OpenAI APIエラー: {e}", 0, 0
 
     async def check_typos_async(client, ocr_results_dict):
         """
@@ -618,7 +625,7 @@ else: # Google認証済みの場合のみ以下を実行
             if v and "テキストは検出されませんでした。" not in v and "APIエラー" not in v and "予期せぬエラー" not in v
         }
         
-        if not filtered_items: return "OK！"
+        if not filtered_items: return "OK！", 0, 0
 
         # AIに渡すテキストを整形（【ポータル名】テキスト... の形式）
         formatted_text = ""
@@ -668,11 +675,11 @@ else: # Google認証済みの場合のみ以下を実行
 {formatted_text}"""
         # --- プロンプト修正終了 ---
 
-        response_str = await call_openai_text_api_async(client, prompt)
+        response_str, in_tokens, out_tokens = await call_openai_text_api_async(client, prompt)
         try:
             result_json = json.loads(response_str)
             if result_json.get("status") == "ok": 
-                return "OK！"
+                return "OK！", in_tokens, out_tokens
             elif result_json.get("status") == "error": 
                 message = result_json.get("message", "エラー")
                 affected_sources = result_json.get("affected_sources", [])
@@ -681,13 +688,13 @@ else: # Google認証済みの場合のみ以下を実行
                 if affected_sources:
                     # JSON等の表記揺れ対策（念のため文字列化して結合）
                     sources_str = "」「".join([str(s) for s in affected_sources])
-                    return f"{message}\n（対象：「{sources_str}」）"
+                    return f"{message}\n（対象：「{sources_str}」）", in_tokens, out_tokens
                 else:
-                    return message
+                    return message, in_tokens, out_tokens
             else: 
-                return "不明" # APIが予期しない形式で返した場合
+                return "不明", in_tokens, out_tokens # APIが予期しない形式で返した場合
         except (json.JSONDecodeError, AttributeError): 
-            return "解析不能" # JSON解析失敗など
+            return "解析不能", in_tokens, out_tokens # JSON解析失敗など
 
     async def compare_content_volume_async(client, base_content, volume_results_dict):
         """AIを使用して、基準となる内容量と複数の比較対象内容量が一致するか判定する（緩やかな判定）"""
@@ -696,11 +703,11 @@ else: # Google認証済みの場合のみ以下を実行
 
         # 比較対象となるポータルの内容量が一つもなければ「内容量記載なし」
         if not valid_portal_items:
-            return "内容量記載なし"
+            return "内容量記載なし", 0, 0
 
         # NENGの内容量（基準）が空なら「要確認」
         if not base_content:
-            return "要確認"
+            return "要確認", 0, 0
 
         prompt = f"""あなたは商品の内容量テキストが、実質的に同じ意味であるかを判断するチェック担当者（人間）です。
 以下の基準に従って、柔軟に判定を行ってください。
@@ -732,23 +739,23 @@ else: # Google認証済みの場合のみ以下を実行
 失敗時（NGの場合）:
 {{"result": "ng", "deviant_sources": ["Portal A", "Portal B"]}}
 """
-        response_str = await call_openai_text_api_async(client, prompt)
+        response_str, in_tokens, out_tokens = await call_openai_text_api_async(client, prompt)
         try:
             result_json = json.loads(response_str)
             if result_json.get("result") == "ok":
-                return "OK！"
+                return "OK！", in_tokens, out_tokens
             else:
                 # NGの場合
                 deviant_sources = result_json.get("deviant_sources", [])
                 base_msg = "要確認"
                 if deviant_sources:
                     sources_str = "」「".join([str(s) for s in deviant_sources])
-                    return f"{base_msg}\n（対象：「{sources_str}」）"
+                    return f"{base_msg}\n（対象：「{sources_str}」）", in_tokens, out_tokens
                 else:
-                    return base_msg
+                    return base_msg, in_tokens, out_tokens
                     
         except (json.JSONDecodeError, AttributeError):
-            return "要確認" # JSON解析失敗や result キーがない場合は「要確認」扱い
+            return "要確認", in_tokens, out_tokens # JSON解析失敗や result キーがない場合は「要確認」扱い
         
     # テキストの意味的一致を確認するAI関数
     async def compare_text_content_async(client, texts):
@@ -759,12 +766,12 @@ else: # Google認証済みの場合のみ以下を実行
         valid_texts = [t for t in texts if t and "テキストは検出されませんでした。" not in t and "APIエラー" not in t]
         
         if len(valid_texts) <= 1:
-            return "比較対象なし"
+            return "比較対象なし", 0, 0
 
         # Python側で単純な正規化（全空白削除）をして一致すればAPI節約のため即OK
         simple_normalized = {re.sub(r'\s+', '', t) for t in valid_texts}
         if len(simple_normalized) == 1:
-            return "OK！"
+            return "OK！", 0, 0
 
         prompt = f"""あなたはテキスト比較の専門家です。以下の複数のテキストリストの内容が、実質的に同じであるかを判定してください。
 
@@ -785,12 +792,12 @@ else: # Google認証済みの場合のみ以下を実行
 全て実質的に同じテキストであれば `ok`、明確な差分（特に句読点の有無）があれば `ng` をJSON形式で返してください。
 {{"result": "ok"}} または {{"result": "ng"}}
 """
-        response_str = await call_openai_text_api_async(client, prompt)
+        response_str, in_tokens, out_tokens = await call_openai_text_api_async(client, prompt)
         try:
             result_json = json.loads(response_str)
-            return "OK！" if result_json.get("result") == "ok" else "差分あり"
+            return ("OK！", in_tokens, out_tokens) if result_json.get("result") == "ok" else ("差分あり", in_tokens, out_tokens)
         except (json.JSONDecodeError, AttributeError):
-            return "差分あり" # 解析失敗時は安全側に倒してNG
+            return "差分あり", in_tokens, out_tokens # 解析失敗時は安全側に倒してNG
 
     def download_drive_image_sync(file_id, credentials):
         """同期的にGoogle Driveから画像データをダウンロードする"""
@@ -809,9 +816,9 @@ else: # Google認証済みの場合のみ以下を実行
             # Base64エンコード
             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
         except HttpError as e:
-            return portal_name, f"Google Drive画像取得失敗 (HttpError {e.resp.status})", "", None
+            return portal_name, f"Google Drive画像取得失敗 (HttpError {e.resp.status})", "", None, 0, 0
         except Exception as e:
-            return portal_name, f"Google Drive画像取得失敗: {e}", "", None # その他のエラー
+            return portal_name, f"Google Drive画像取得失敗: {e}", "", None, 0, 0 # その他のエラー
 
         # --- プロンプト ---
         prompt = """あなたは、商品広告画像のテキスト抽出の専門家です。
@@ -836,7 +843,7 @@ else: # Google認証済みの場合のみ以下を実行
 """
 
         # OpenAI Vision API呼び出し (JSONモード)
-        response_text = await call_openai_vision_api_async(client, prompt, image_base64, mime_type)
+        response_text, in_tokens, out_tokens = await call_openai_vision_api_async(client, prompt, image_base64, mime_type)
 
         final_full_text = ""
         final_volume_text = ""
@@ -847,7 +854,7 @@ else: # Google認証済みの場合のみ以下を実行
             
             # errorキーがある場合はAPIエラーとして処理
             if "error" in json_data:
-                return portal_name, json_data["error"], "", image_bytes
+                return portal_name, json_data["error"], "", image_bytes, in_tokens, out_tokens
 
             final_full_text = json_data.get("full_text", "").strip()
             final_volume_text = json_data.get("volume_text", "").strip()
@@ -863,11 +870,14 @@ else: # Google認証済みの場合のみ以下を実行
             final_full_text = cleaned_text.strip()
             final_volume_text = "" # 解析不能なため空にする
 
-        return portal_name, final_full_text, final_volume_text, image_bytes
+        return portal_name, final_full_text, final_volume_text, image_bytes, in_tokens, out_tokens
 
     # --- メインの非同期処理ワーカー ---
     async def process_single_record_async(image_name, data, selected_product_code, credentials, client, semaphore, neng_content_map):
         async with semaphore: # 同時実行数を制限
+            rec_input_tokens = 0
+            rec_output_tokens = 0
+
             # OCRタスクとNENG APIタスクをリストに格納
             ocr_tasks = [extract_text_from_drive_image_async(p_name, p_data['id'], p_data['mimeType'], credentials, client)
                          for p_name, p_data in data['portals'].items()]
@@ -891,10 +901,12 @@ else: # Google認証済みの場合のみ以下を実行
             # OCR結果と画像データを辞書に整理
             ocr_results, volume_results, image_bytes_data = {}, {}, {}
             
-            for p_name, extracted_text, volume_text, img_bytes in ocr_task_results:
+            for p_name, extracted_text, volume_text, img_bytes, in_t, out_t in ocr_task_results:
                 ocr_results[p_name] = extracted_text
                 volume_results[p_name] = volume_text # 画像から直接抽出した内容量
                 if img_bytes: image_bytes_data[p_name] = img_bytes # 画像データも保持
+                rec_input_tokens += in_t
+                rec_output_tokens += out_t
 
             # 誤字脱字チェックのタスクのみ作成（内容量抽出はVision APIで完了済み、NENGはそのまま使う）
             typo_task = check_typos_async(client, ocr_results) 
@@ -907,7 +919,10 @@ else: # Google認証済みの場合のみ以下を実行
                 typo_task,
                 text_compare_task
             )
-            typo_result, text_comparison_result = secondary_results
+            (typo_result, typo_in, typo_out), (text_comparison_result, txt_in, txt_out) = secondary_results
+            
+            rec_input_tokens += typo_in + txt_in
+            rec_output_tokens += typo_out + txt_out
 
             # NENG内容量はそのまま使用（抽出なし）
             processed_neng_content = raw_neng_content
@@ -917,11 +932,14 @@ else: # Google認証済みの場合のみ以下を実行
             
             # volume_results の値リストではなく、辞書そのものと、クリーニング済み辞書を作成して渡す手もあるが、
             # AI側でJSONとして受け取るため、volume_results（辞書）をそのまま渡す
-            comparison_result = await compare_content_volume_async(client, cleaned_neng_content, volume_results)
+            comparison_result, comp_in, comp_out = await compare_content_volume_async(client, cleaned_neng_content, volume_results)
+            
+            rec_input_tokens += comp_in
+            rec_output_tokens += comp_out
 
             # [削除] 以前のPythonによる厳密比較ロジックは削除し、AIの結果(text_comparison_result)をそのまま使用
 
-            return image_name, ocr_results, volume_results, image_bytes_data, typo_result, processed_neng_content, comparison_result, text_comparison_result
+            return image_name, ocr_results, volume_results, image_bytes_data, typo_result, processed_neng_content, comparison_result, text_comparison_result, rec_input_tokens, rec_output_tokens
 
     async def main_async_runner(image_groups, selected_product_code, credentials, client, progress_bar, total_records, neng_content_map):
         semaphore = asyncio.Semaphore(25)
@@ -1028,10 +1046,15 @@ else: # Google認証済みの場合のみ以下を実行
             ordered_columns.extend([f"{p}（画像）", f"{p}（OCR）", f"{p}（内容量）"])
         ordered_columns.extend(["テキスト比較", "誤字脱字", "NENG内容量", "内容量比較", "エラー検出"])
 
-        for image_name, ocr_results, volume_results, image_bytes, typo_result, neng_content, comparison_result, text_comparison_result in all_results:
+        grand_total_input = 0
+        grand_total_output = 0
+
+        for image_name, ocr_results, volume_results, image_bytes, typo_result, neng_content, comparison_result, text_comparison_result, rec_in, rec_out in all_results:
             
             # --- 画像バイナリデータを辞書に格納 ---
             all_image_bytes_data[image_name] = image_bytes # image_bytes は {portal_name: bytes}
+            grand_total_input += rec_in
+            grand_total_output += rec_out
             
             row_data_display, row_data_excel = {"画像名": image_name}, {"画像名": image_name}
 
@@ -1151,6 +1174,27 @@ else: # Google認証済みの場合のみ以下を実行
 
         df_plain_text_for_search = df_display.map(
             lambda x: re.sub('<[^<]+?>', '', str(x)) if isinstance(x, str) else x
+        )
+
+        # --- ログ記録の実行 ---
+        if 'google_credentials_info' not in globals():
+             _, google_creds_info_log = get_google_credentials()
+        else:
+             google_creds_info_log = globals()['google_credentials_info']
+             
+        # 自治体DBと同じスプレッドシートID
+        SPREADSHEET_ID = '1n8qDS8OvuFJwDy2J6wduDHI32GxDmbx1QIrqHPFjdGo'
+        
+        # ユーザー情報の取得
+        user_info = st.user.email if hasattr(st.user, "email") else st.user.name
+
+        log_ocr_execution(
+            creds_info=google_creds_info_log,
+            spreadsheet_id=SPREADSHEET_ID,
+            user_info=user_info,
+            image_count=st.session_state.image_total_count_to_process,
+            input_tokens=grand_total_input,
+            output_tokens=grand_total_output
         )
 
         # --- all_image_bytes_data と df_excel も返す (スプレッドシート保存用) ---
