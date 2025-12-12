@@ -707,16 +707,16 @@ else: # Google認証済みの場合のみ以下を実行
 
 ### 判定基準（緩やかな一致）
 1. **実質的な意味の一致**: 表記が異なっていても、人間が見て「同じ量」だと判断できる場合は「OK」としてください。
-    - 例: "90ml×6個" と "90mlX6" -> **OK** (×とXの違い、単位の省略は許容)
-    - 例: "2kg" と "2.0kg" -> **OK** (有効数字の違いは許容)
-    - 例: "合計1kg (500g×2)" と "1kg" -> **OK**
+   - 例: "90ml×6個" と "90mlX6" -> **OK** (×とXの違い、単位の省略は許容)
+   - 例: "2kg" と "2.0kg" -> **OK** (有効数字の違いは許容)
+   - 例: "合計1kg (500g×2)" と "1kg" -> **OK**
 2. **表記揺れの無視**:
-    - 大文字・小文字の違い (ml, ML, mL) -> **無視**
-    - 全角・半角の違い -> **無視**
-    - スペースの有無 -> **無視**
-    - 順序の違い ("2kg 5本" と "5本 2kg") -> **無視**
+   - 大文字・小文字の違い (ml, ML, mL) -> **無視**
+   - 全角・半角の違い -> **無視**
+   - スペースの有無 -> **無視**
+   - 順序の違い ("2kg 5本" と "5本 2kg") -> **無視**
 3. **明らかに違う場合のみNG**:
-    - 数量や単位が明らかに異なる場合（例: "1kg" と "2kg"）は「NG」としてください。
+   - 数量や単位が明らかに異なる場合（例: "1kg" と "2kg"）は「NG」としてください。
 
 ### 入力データ
 - **基準データ (NENG)**: "{base_content}"
@@ -770,13 +770,13 @@ else: # Google認証済みの場合のみ以下を実行
 
 ### 判定基準
 1. **無視してよい違い（OK）**:
-    - **改行・空白**: 「改行の位置」や「スペースの有無・個数」の違いは無視してください。（例: "商品\\n名" と "商品名" は同じ）
-    - **記号の全角半角**: 意味が変わらない範囲の記号の違い（「！」と「!」など）は無視してください。
+   - **改行・空白**: 「改行の位置」や「スペースの有無・個数」の違いは無視してください。（例: "商品\\n名" と "商品名" は同じ）
+   - **記号の全角半角**: 意味が変わらない範囲の記号の違い（「！」と「!」など）は無視してください。
 
 2. **許容しない違い（NG）**:
-    - **文字の相違**: 一文字でも異なる文字があればNGです。
-    - **【重要】句読点（、。,.）の有無**: 読点「、」や句点「。」があるものとないものが混在している場合は、デザインミスの可能性があるため必ず「NG」としてください。
-    - **数字・単位**: これらが異なる場合はNGです。
+   - **文字の相違**: 一文字でも異なる文字があればNGです。
+   - **【重要】句読点（、。,.）の有無**: 読点「、」や句点「。」があるものとないものが混在している場合は、デザインミスの可能性があるため必ず「NG」としてください。
+   - **数字・単位**: これらが異なる場合はNGです。
 
 ### 入力テキストリスト
 {json.dumps(valid_texts, ensure_ascii=False)}
@@ -1626,53 +1626,47 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 mask_product = df_to_process['画像名'].apply(get_product_code_from_filename) == selected_product_filter
                 df_to_process = df_to_process[mask_product]
 
-            # 2. ステータスフィルター
+            # --- 動的なステータス判定用の関数 ---
+            def is_row_error_visible(row):
+                # 1. エラー検出 (常にチェック)
+                if "エラー検出" in row and "失敗あり" in str(row["エラー検出"]):
+                    return True
+                
+                # 2. テキスト比較 (表示時のみ)
+                if show_text_compare:
+                    if "テキスト比較" in row and "差分あり" in str(row["テキスト比較"]):
+                        return True
+
+                # 3. 誤字脱字・OCRエラー (表示時のみ)
+                if show_ocr_cols:
+                    if "誤字脱字" in row and '<span style="color: blue;">OK！</span>' not in str(row["誤字脱字"]):
+                        return True
+                    # OCR列のエラーチェック
+                    for col_name in row.index:
+                        if col_name.endswith('（OCR）'):
+                            cell_content = str(row[col_name])
+                            if "APIエラー" in cell_content or "AI OCRエラー" in cell_content or "画像取得失敗" in cell_content:
+                                return True
+
+                # 4. 内容量 (表示時のみ)
+                if show_content_cols:
+                    if "内容量比較" in row and "要確認" in str(row["内容量比較"]):
+                        return True
+
+                return False
+
+            # 現在の表示設定に基づいて、各行が「要確認」かどうかを判定するマスクを作成
+            effective_error_mask = df_to_process.apply(is_row_error_visible, axis=1)
+
+            # 2. ステータスフィルター (動的判定を使用)
             if status_filter != "すべて":
-                df_filtered_before_status = df_to_process.copy()
-                all_columns = df_display_source.columns
-                visible_columns = []
-                for col in all_columns:
-                    if col in ["No", "画像名", "ステータス", "エラー検出"]:
-                        visible_columns.append(col)
-                        continue
-                    
-                    # テキスト比較の制御
-                    if col == "テキスト比較" and show_text_compare:
-                        visible_columns.append(col)
-                        continue
-                    
-                    # 誤字脱字のみ show_ocr_cols で制御
-                    if col == "誤字脱字" and show_ocr_cols:
-                        visible_columns.append(col)
-                        continue
-                    
-                    if col in ["NENG内容量", "内容量比較"] and show_content_cols:
-                        visible_columns.append(col)
-                        continue
-                    is_portal_col = False
-                    for portal in selected_portals:
-                        if portal in col:
-                            is_portal_col = True
-                            break
-                    if is_portal_col:
-                        if '（画像）' in col:
-                            visible_columns.append(col)
-                        elif '（OCR）' in col and show_ocr_cols:
-                            visible_columns.append(col)
-                        elif '（内容量）' in col and show_content_cols:
-                            visible_columns.append(col)
-
-                df_visible_cols_only = df_filtered_before_status[visible_columns]
-                is_row_highlighted = df_visible_cols_only.apply(
-                    # 引数に text_compare_visible=show_text_compare を追加
-                    lambda row: 'background-color: #ffe5e5' in highlight_row(row, show_ocr_cols, show_content_cols, show_text_compare)[0],
-                    axis=1
-                )
-
                 if status_filter == "要確認":
-                    df_to_process = df_filtered_before_status[is_row_highlighted]
+                    df_to_process = df_to_process[effective_error_mask]
                 elif status_filter == "異常なし":
-                    df_to_process = df_filtered_before_status[~is_row_highlighted] 
+                    df_to_process = df_to_process[~effective_error_mask]
+                
+                # フィルタリングされたデータに対してマスクを再計算 (カウント用)
+                effective_error_mask = df_to_process.apply(is_row_error_visible, axis=1)
 
             # 3. 全文検索フィルター
             if search_term:
@@ -1682,6 +1676,9 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                     axis=1
                 )
                 df_to_process = df_to_process[mask_search]
+                
+                # フィルタリングされたデータに対してマスクを再計算 (カウント用)
+                effective_error_mask = df_to_process.apply(is_row_error_visible, axis=1)
 
             # --- フィルタリング結果表示 ---
             filtered_count = len(df_to_process)
@@ -1690,8 +1687,8 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
             col_header_left, col_header_right = st.columns([3, 2], vertical_alignment="bottom")
 
             with col_header_left:
-                # フィルター適用後のデータフレームから「要確認」が含まれる行数をカウント
-                need_check_count = df_to_process['ステータス'].astype(str).str.contains("要確認").sum()
+                # フィルター適用後のデータフレームから「要確認」が含まれる行数をカウント (動的判定の結果を使用)
+                need_check_count = effective_error_mask.sum()
                 
                 # 件数が1件以上ある場合のみ表示
                 if need_check_count > 0:
