@@ -57,13 +57,6 @@ else:
     img_src = "" 
     st.error(f"画像ファイルが見つかりません: {page_icon_path}")
 
-
-st.set_page_config(
-    page_title="商品画像OCR",
-    page_icon=page_icon_path, # こちらは元のパス指定のままでOK
-    layout="wide"
-)
-
 # === ログイン画面の表示 ===
 if not st.user.get("is_logged_in", False): 
     
@@ -255,7 +248,6 @@ else: # Google認証済みの場合のみ以下を実行
         """
         st.session_state.ocr_result_df = None
         st.session_state.ocr_plain_df = None
-        # [削除] ocr_excel_output のクリアを削除
         st.session_state.ocr_excel_df = None 
         st.session_state.ocr_image_bytes = None
         st.session_state.current_page = 1
@@ -836,10 +828,12 @@ else: # Google認証済みの場合のみ以下を実行
    - テキストがない場合は空文字にしてください。
 
 2. **volume_text**: 画像の中から、「商品の内容量」「重量」「個数」に関する記述を抽出してください。
-   - **【重要】品名との結合**: 「2種」「5個」「3パック」のように、数量だけでは「何が」その量なのか分からない場合は、**必ず直前や近くにある「品名・カテゴリ名」を補って書き出してください。**
-     - 悪い例: "2種"
-     - 良い例: "肉加工品 2種"
-   - **レイアウト対応**: 品名と数量が**改行で離れて記載されている場合**（例：上が「ハンバーグ」、下が「5個」）も、それらを結合して「ハンバーグ 5個」として抽出してください。
+   - **【最重要】捏造の禁止**: 画像内に**明記されているテキストのみ**を使用してください。
+     - 画像の「見た目」から商品名を推測して勝手に単語（例：「ソルベ」「アイス」など）を追加することは**絶対に禁止**です。
+     - **悪い例**: 画像に「いちご」としか書いてないのに、写真を見て "ストロベリーソルベ 6個" と出力する。
+     - **良い例**: "いちご 6個"
+   - **品名との結合**: 「6個」「2種」のように数量だけでは分からない場合は、**画像内に書かれている**「品名・カテゴリ名」を補って書き出してください。
+   - **レイアウト対応**: 品名と数量が改行で離れて記載されている場合も、それらを結合して抽出してください。
    - 複数のアイテムがある場合は、「お米 5kg、肉 1kg」のようにそれぞれの内訳が分かるように記述してください。
    - 不要な形容詞（「おいしい」「絶品の」など）や、量と無関係な宣伝文句は除外してください。
    - 該当する記述がない場合は空文字にしてください。
@@ -946,7 +940,7 @@ else: # Google認証済みの場合のみ以下を実行
             rec_input_tokens += comp_in
             rec_output_tokens += comp_out
 
-            # [削除] 以前のPythonによる厳密比較ロジックは削除し、AIの結果(text_comparison_result)をそのまま使用
+            # 以前のPythonによる厳密比較ロジックは削除し、AIの結果(text_comparison_result)をそのまま使用
 
             return image_name, ocr_results, volume_results, image_bytes_data, typo_result, processed_neng_content, comparison_result, text_comparison_result, rec_input_tokens, rec_output_tokens
 
@@ -1411,7 +1405,6 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                         # --- 実行前に前回の結果をクリアする ---
                         st.session_state.ocr_result_df = None
                         st.session_state.ocr_plain_df = None
-                        # [削除] ocr_excel_output のクリアを削除
                         st.session_state.ocr_excel_df = None 
                         st.session_state.ocr_image_bytes = None
                         st.session_state.current_page = 1
@@ -1442,8 +1435,6 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                                         progress_bar
                                     )
                                     if df is not None: 
-                                        
-                                        # [削除] Excelファイル生成処理を削除
                                         
                                         st.session_state.ocr_result_df = df
                                         st.session_state.ocr_plain_df = df_plain
@@ -1660,12 +1651,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         # --- データフィルタリング ---
         df_to_process = df_display_source.copy() 
 
-        # [削除] 下部にあったファイル名生成などは上部に移動済み
-        # [削除] 下部にあったshow_gspread_buttonブロックは上部に移動済み
-
         col_header_left, col_header_right = st.columns([3, 2])
-        
-        # [削除] コールバック関数 _execute_gspread_save は上部に移動済み
 
         if not selected_portals:
             with col_header_left:
@@ -1872,8 +1858,6 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                 if p5.button("＞＞", width='stretch', disabled=is_disabled_next, key="page_last"):
                     st.session_state.current_page = total_pages
                     st.rerun()
-
-        # [削除] ここにあったスプレッドシート保存処理は上部に移動済み
 
     # --- OCR結果がまだない場合の表示 ---
     else:
