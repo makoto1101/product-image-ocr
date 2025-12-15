@@ -5,8 +5,9 @@ import streamlit as st
 
 def log_ocr_execution(creds_info, spreadsheet_id, user_info, image_count, input_tokens, output_tokens):
     """
-    OCR実行ログを記録する関数
+    OCR実行ログをスプレッドシートの「logs」シートに記録する関数
     入力/出力トークンを分けて記録し、概算コストも計算する
+    ※日時は日本時間(JST)で記録する
     """
     try:
         # --- 認証とスプレッドシートへの接続 ---
@@ -47,7 +48,13 @@ def log_ocr_execution(creds_info, spreadsheet_id, user_info, image_count, input_
             ])
             
         # --- 記録するデータの準備 ---
-        now_str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        
+        # 日本時間 (JST: UTC+9) を生成
+        t_delta = datetime.timedelta(hours=9)
+        JST = datetime.timezone(t_delta, 'JST')
+        now = datetime.datetime.now(JST)
+        now_str = now.strftime('%Y/%m/%d %H:%M:%S')
+        
         user_display = str(user_info)
         total_tokens = input_tokens + output_tokens
 
@@ -60,7 +67,7 @@ def log_ocr_execution(creds_info, spreadsheet_id, user_info, image_count, input_
 
         # 行データ
         row_data = [
-            now_str,        # A: 日時
+            now_str,        # A: 日時 (JST)
             user_display,   # B: 利用者
             image_count,    # C: 画像枚数
             input_tokens,   # D: 入力
