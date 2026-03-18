@@ -1267,12 +1267,24 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
         with st.container(border=True):
             st.header("2. 実行設定")
 
-            with st.expander("自治体リストの参照元"):
-                st.markdown("[こちらのスプレッドシートのデータを参照しています。](https://docs.google.com/spreadsheets/d/1n8qDS8OvuFJwDy2J6wduDHI32GxDmbx1QIrqHPFjdGo/)", unsafe_allow_html=True)
+            # カラムを4:1の比率で2つに分割
+            col_ref, col_btn = st.columns([4, 1], vertical_alignment="center")
+            
+            with col_ref:
+                with st.expander("自治体リストの参照元"):
+                    st.markdown("[こちらのスプレッドシートのデータを参照しています。](https://docs.google.com/spreadsheets/d/1n8qDS8OvuFJwDy2J6wduDHI32GxDmbx1QIrqHPFjdGo/)", unsafe_allow_html=True)
+
+            with col_btn:
+                # ボタン名を「更新」に変更
+                if st.button("更新", help="自治体リストを最新化", use_container_width=True):
+                    get_municipality_map.clear() # 1. キャッシュをリセット
+                    st.session_state.municipality_map = {} # 2. セッションステートも空にする
+                    st.rerun()
 
             municipality_map = st.session_state.get("municipality_map", {})
 
             if isinstance(municipality_map, list):
+            
                 st.sidebar.warning("自治体リストの形式が古いです。データを再読み込みします。")
                 with st.sidebar, st.spinner("自治体リストを更新中..."):
                     if 'sheets_service' not in locals():
