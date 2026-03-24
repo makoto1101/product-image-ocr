@@ -1015,10 +1015,11 @@ else: # Google認証済みの場合のみ以下を実行
         # NENG APIの事前一括呼び出し
         neng_content_map = {}
         if product_codes_to_fetch:
-            progress_bar.progress(0.0, text="2. NENGデータ取得中...") 
+            use_n3_api = str(municipality_neng_version).upper() == "N3"
+            neng_progress_text = "2. N3データ取得中..." if use_n3_api else "2. N2データ取得中..."
+            progress_bar.progress(0.0, text=neng_progress_text)
             try:
                 # 非同期でNENG APIを並列実行
-                use_n3_api = str(municipality_neng_version).upper() == "N3"
                 if use_n3_api:
                     neng_tasks = [get_n3_content(prod_code, municipality_code) for prod_code in product_codes_to_fetch]
                 else:
