@@ -18,6 +18,7 @@ import os
 
 # --- ローカルモジュールのインポート ---
 from neng_api import get_neng_content
+from n3_api import get_n3_content
 from export import save_to_spreadsheet
 from manual import show_instructions
 from log import log_ocr_execution
@@ -188,9 +189,9 @@ else: # Google認証済みの場合のみ以下を実行
     # --- スプレッドシートから自治体リストとコードを取得する関数 ---
     @st.cache_data(ttl=3600) # 1時間キャッシュ
     def get_municipality_map(_sheets_service):
-        """スプレッドシートから自治体名とコードのマップを取得する"""
+        """スプレッドシートから自治体名とNENG連携設定のマップを取得する"""
         SPREADSHEET_ID = '1n8qDS8OvuFJwDy2J6wduDHI32GxDmbx1QIrqHPFjdGo'
-        RANGE_NAME = '自治体DB!A2:B'
+        RANGE_NAME = '自治体DB!A2:D'
         municipality_map = {}
         try:
             sheet = _sheets_service.spreadsheets()
@@ -202,10 +203,21 @@ else: # Google認証済みの場合のみ以下を実行
                 st.sidebar.error("スプレッドシートから自治体データを取得できませんでした。")
                 return {}
 
-            # { "自治体名": "コード", ... } の辞書を作成
+            # {"自治体名": {"n2_code": "...", "n3_code": "...", "neng_version": "N2|N3"}} の辞書を作成
             for row in values:
-                if len(row) >= 2 and row[0] and row[1]: # 名前とコードが両方存在する場合のみ
-                    municipality_map[row[0]] = row[1]
+                if not row or not row[0]:
+                    continue
+
+                municipality_name = row[0].strip()
+                n2_code = row[1].strip() if len(row) > 1 and row[1] else ""
+                n3_code = row[2].strip() if len(row) > 2 and row[2] else ""
+                neng_version = row[3].strip().upper() if len(row) > 3 and row[3] else "N2"
+
+                municipality_map[municipality_name] = {
+                    "n2_code": n2_code,
+                    "n3_code": n3_code,
+                    "neng_version": neng_version,
+                }
 
             # 名前順にソートした辞書を返す
             sorted_map = dict(sorted(municipality_map.items()))
@@ -970,7 +982,7 @@ else: # Google認証済みの場合のみ以下を実行
         return results
 
     # --- メインの実行関数 ---
-    def run_ocr_process(portal_files, municipality_code, selected_business_code, selected_product_code, credentials, client, progress_bar):
+    def run_ocr_process(portal_files, municipality_code, municipality_neng_version, selected_business_code, selected_product_code, credentials, client, progress_bar):
         # 画像ファイル名ごとにポータル情報をグループ化
         image_groups = {}
         # NENG APIで取得するユニークな品番を収集するセット
@@ -997,15 +1009,20 @@ else: # Google認証済みの場合のみ以下を実行
             st.warning("処理対象の画像が見つかりませんでした。")
             return None, None, None, None
 
-        print(unique_product_codes_to_fetch)
+        product_codes_to_fetch = sorted(unique_product_codes_to_fetch)
+        print(product_codes_to_fetch)
 
         # NENG APIの事前一括呼び出し
         neng_content_map = {}
-        if unique_product_codes_to_fetch:
+        if product_codes_to_fetch:
             progress_bar.progress(0.0, text="2. NENGデータ取得中...") 
             try:
                 # 非同期でNENG APIを並列実行
-                neng_tasks = [get_neng_content(prod_code, municipality_code) for prod_code in unique_product_codes_to_fetch]
+                use_n3_api = str(municipality_neng_version).upper() == "N3"
+                if use_n3_api:
+                    neng_tasks = [get_n3_content(prod_code, municipality_code) for prod_code in product_codes_to_fetch]
+                else:
+                    neng_tasks = [get_neng_content(prod_code, municipality_code) for prod_code in product_codes_to_fetch]
 
                 async def fetch_neng_data():
                     return await asyncio.gather(*neng_tasks)
@@ -1013,7 +1030,7 @@ else: # Google認証済みの場合のみ以下を実行
                 neng_results = asyncio.run(fetch_neng_data())
 
                 # 結果を辞書（品番: 内容量）にマッピング
-                neng_content_map = dict(zip(unique_product_codes_to_fetch, neng_results))
+                neng_content_map = dict(zip(product_codes_to_fetch, neng_results))
 
                 print(neng_content_map)
 
@@ -1422,17 +1439,36 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                         st.session_state.current_page = 1
 
                         municipality_code = None
+                        municipality_neng_version = "N2"
                         try:
                             municipality_map = st.session_state.get("municipality_map", {})
-                            municipality_code = municipality_map.get(selected_municipality_name)
+                            selected_municipality_info = municipality_map.get(selected_municipality_name)
 
-                            if not municipality_code:
-                                st.error("選択された自治体のコードが見つかりません。")
+                            # 旧形式（文字列: N2コードのみ）にも互換対応
+                            if isinstance(selected_municipality_info, dict):
+                                municipality_neng_version = str(selected_municipality_info.get("neng_version", "N2")).upper()
+                                if municipality_neng_version == "N3":
+                                    municipality_code = selected_municipality_info.get("n3_code")
+                                    if not municipality_code:
+                                        st.error("選択された自治体はN3設定ですが、自治体DBの3列目（N3コード）が空です。")
+                                else:
+                                    municipality_code = selected_municipality_info.get("n2_code")
+                                    if not municipality_code:
+                                        st.error("選択された自治体の2列目（N2コード）が見つかりません。")
+                            else:
+                                municipality_code = selected_municipality_info
+                                if not municipality_code:
+                                    st.error("選択された自治体のコードが見つかりません。")
                         except Exception as e:
                             st.error(f"自治体コード取得中にエラー: {e}")
 
 
                         if municipality_code:
+                            print(
+                                f"[OCR実行] 自治体名={selected_municipality_name}, "
+                                f"自治体コード={municipality_code}, "
+                                f"NENGバージョン={municipality_neng_version}"
+                            )
                             with st.spinner("OCR処理を実行中です..."):
                                 progress_bar = st.progress(0, text="準備中...")
                                 try:
@@ -1440,6 +1476,7 @@ URL指定用フォルダ ＞ ポータル名等が付いたフォルダ（複数
                                     df, df_plain, df_excel, image_bytes_data = run_ocr_process(
                                         st.session_state.portal_files,
                                         municipality_code,
+                                        municipality_neng_version,
                                         selected_business_code,
                                         selected_product_code,
                                         google_creds,
